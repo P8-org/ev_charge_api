@@ -1,52 +1,34 @@
+import json
 from typing import Any, Optional
 from pydantic import BaseModel, Json
 import requests 
-from power_api.BaseApi import BaseApiCall, RequestDetail
 import datetime
 
-# other name?
-class RequestEnergiData(RequestDetail):
+
+class RequestDetail(BaseModel):
+    startDate: datetime.date
+    endDate: datetime.date
     dataset: str
     optional: Optional[str] = ""
     filter_json: Optional[str] = ""
     sort_data: Optional[str] = ""
-    offset: Optional[int] = 100
+    offset: Optional[int] = 0
     limit: Optional[int] = 100
     
-
 class EnergiDataInstance(BaseModel):
-    hourUTC: str
-    hourDK: str
-    priceArea: str = "DK1"
-    version: str
-    fuelAllocationMethod: str
-    reportGrpCode: str
-    productionType: str
-    deliveryType: str
-    production_MWh: Optional[float] = 0
-    shareTotal: Optional[float] = 0
-    shareGrid: Optional[float] = 0
-    fuelConsumptionGJ: Optional[float] = 0
-    CO2PerKWh: Optional[float] = 0
-    CO2OriginPerKWh: Optional[float] = 0
-    SO2PerKWh: Optional[float] = 0
-    NOxPerKWh: Optional[float] = 0
-    NMvocPerKWh: Optional[float] = 0
-    CH4PerKWh: Optional[float] = 0
-    COPerKWh: Optional[float] = 0
-    N2OPerKWh: Optional[float] = 0
-    slagPerKWh: Optional[float] = 0
-    flyAshPerKWh: Optional[float] = 0
-    particlesPerKWh: Optional[float] = 0
-    wastePerKWh: Optional[float] = 0
-    desulpPerKWh: Optional[float] = 0
+    HourUTC: str
+    HourDK: Optional[str]
+    PriceArea: str = "DK1"
+    SpotPriceDKK: Optional[float]
+    SpotPriceEUR: Optional[float]
 
-class EnergiData(BaseApiCall):
-    # data: dict[str, EnergiDataInstance] # key = hourUTC
+class EnergiData:
+    def __init__(self):
+        self.data = []
+
+    data: list[EnergiDataInstance]
 
     def call_api(self, rd: RequestDetail):
-        if not isinstance(rd, RequestEnergiData):
-            raise TypeError(f"Expected an instance of Parent or its subclass, got {type(rd).__name__}")
         base_url = "https://api.energidataservice.dk/dataset/"
         request_string = f'{rd.dataset}?start={rd.startDate}&end={rd.endDate}'
 
@@ -62,7 +44,13 @@ class EnergiData(BaseApiCall):
             request_string += f'&limit={rd.limit}'
  
         r = requests.get(base_url+request_string)
-        return r.json()
+        r_json = r.json()
+
+        for record in r_json["records"]:
+            j = json.dumps(record)
+            edi = EnergiDataInstance.model_validate_json(j)
+            self.data.append(edi)
+        
         
 
 
