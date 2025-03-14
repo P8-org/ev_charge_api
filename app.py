@@ -2,9 +2,9 @@ import datetime
 import json
 from typing import Union
 from fastapi import FastAPI
-import requests
 
 from power_api.EnergiData import EnergiData, RequestDetail
+from test.test_power_api import test_api_call
 
 app = FastAPI()
 
@@ -13,18 +13,15 @@ app = FastAPI()
 def read_root():
     return {"Hello": "World"}
 
-# @app.get("/power")
-# def power():
-#     return requests.get('https://api.energidataservice.dk/dataset/DeclarationProduction?start=2022-05-01&end=2022-06-01&filter={"PriceArea":["DK1"]}').json()
-
 @app.get("/power")
 def power():
 
     e = EnergiData()
-    now = datetime.date.today() - datetime.timedelta(days=300)
-    last_week = datetime.date.today() - datetime.timedelta(days=301)
-    lim = 2
-    option = "HourUTC,Production_MWh"
+    now = datetime.date(year=2024,month=4,day=18)
+    last_week = datetime.date(year=2024,month=4,day=17)
+    print(now)
+    lim = 1
+    option = "HourUTC"
     fil = json.dumps({"PriceArea": ["DK1"]})
     sort = "HourUTC"
     offset = 0
@@ -37,7 +34,6 @@ def power():
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
-
 
 
 
