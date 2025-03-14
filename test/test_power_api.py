@@ -47,7 +47,67 @@ def test_api_to_data():
     assert edi == e.data[0]
 
 def test_api_parameters():
-    pass
+    control = EnergiData()
+
+    rd_cpy = rd
+
+    base = EnergiData()
+    base.call_api(rd)  
+
+    rd_cpy.limit = 10
+    control.call_api(rd_cpy)
+    assert len(base.data) != len(control.data) # just in case
+    assert len(control.data) == 10
+
+    control.data = []
+    assert control.data == []
+    
+    base = EnergiData()
+    base.call_api(rd_cpy)
+
+    rd_cpy.sort_data = "SpotPriceDKK"
+    control.call_api(rd_cpy)
+    assert base.data != control.data
+    
+
+    control.data = []
+    assert control.data == []
+    rd_cpy.sort_data = ""
+    assert rd_cpy.sort_data == ""
+    rd_cpy.limit = 100
+    assert rd_cpy.limit == 100
+    
+    # rd_cpy.optional = "HourUTC,PriceArea"
+    # control.call_api(rd_cpy)
+    # assert hasattr(control.data, "HourUTC") == True
+    # assert hasattr(control.data, "HourDK") == False
+    # assert hasattr(control.data, "PriceArea") == True
+    # assert hasattr(control.data, "SpotPriceDKK") == False
+    # assert hasattr(control.data, "SpotPriceEUR") == False
+    #
+    # control.data = []
+    # assert control.data == []
+    # rd_cpy.optional = ""
+    # assert rd_cpy == ""
+
+    rd_cpy.filter_json = json.dumps({"PriceArea": ["DK1"]})
+    control.call_api(rd_cpy)
+    assert control.data[0].PriceArea == "DK1"
+    control.data = []
+    rd_cpy.filter_json = json.dumps({"PriceArea": ["DK2"]})
+    control.call_api(rd_cpy)
+    assert control.data[0].PriceArea == "DK2"
+
+    control.data = []
+    assert control.data == []
+    rd_cpy.filter_json = ""
+    assert rd_cpy.filter_json == ""
+
+
+    rd_cpy.offset = 3
+
+
+
 
 
 

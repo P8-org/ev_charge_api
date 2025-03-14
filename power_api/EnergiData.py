@@ -14,11 +14,12 @@ class RequestDetail(BaseModel):
     sort_data: Optional[str] = ""
     offset: Optional[int] = 0
     limit: Optional[int] = 100
-    
+
+#TODO make a choice on which should be optional
 class EnergiDataInstance(BaseModel):
-    HourUTC: str
+    HourUTC: Optional[str]
     HourDK: Optional[str]
-    PriceArea: str = "DK1"
+    PriceArea: Optional[str] = "DK1"
     SpotPriceDKK: Optional[float]
     SpotPriceEUR: Optional[float]
 
