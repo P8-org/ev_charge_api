@@ -1,5 +1,4 @@
 import json
-from typing import Any, Optional
 from pydantic import BaseModel, Json
 import requests 
 import datetime
@@ -9,19 +8,19 @@ class RequestDetail(BaseModel):
     startDate: datetime.date
     endDate: datetime.date
     dataset: str
-    optional: Optional[str] = ""
-    filter_json: Optional[str] = ""
-    sort_data: Optional[str] = ""
-    offset: Optional[int] = 0
-    limit: Optional[int] = 100
+    optional: str = ""
+    filter_json: str = ""
+    sort_data: str = ""
+    offset: int = 0
+    limit: int = 100
 
-#TODO make a choice on which should be optional
+
 class EnergiDataInstance(BaseModel):
-    HourUTC: Optional[str]
-    HourDK: Optional[str]
-    PriceArea: Optional[str] = "DK1"
-    SpotPriceDKK: Optional[float]
-    SpotPriceEUR: Optional[float]
+    HourUTC: str = ""
+    HourDK: str = ""
+    PriceArea: str = ""
+    SpotPriceDKK: float = 0
+    SpotPriceEUR: float = 0
 
 class EnergiData:
     def __init__(self):
@@ -43,7 +42,7 @@ class EnergiData:
             request_string += f'&offset={rd.offset}'
         if not rd.limit == 100:
             request_string += f'&limit={rd.limit}'
- 
+
         r = requests.get(base_url+request_string)
         r_json = r.json()
 

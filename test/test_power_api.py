@@ -1,5 +1,5 @@
 import json
-from power_api.EnergiData import EnergiData, EnergiDataInstance, RequestDetail
+from apis.EnergiData import EnergiData, EnergiDataInstance, RequestDetail
 import requests
 import datetime
 
@@ -77,18 +77,19 @@ def test_api_parameters():
     rd_cpy.limit = 100
     assert rd_cpy.limit == 100
     
-    # rd_cpy.optional = "HourUTC,PriceArea"
-    # control.call_api(rd_cpy)
-    # assert hasattr(control.data, "HourUTC") == True
-    # assert hasattr(control.data, "HourDK") == False
-    # assert hasattr(control.data, "PriceArea") == True
-    # assert hasattr(control.data, "SpotPriceDKK") == False
-    # assert hasattr(control.data, "SpotPriceEUR") == False
-    #
-    # control.data = []
-    # assert control.data == []
-    # rd_cpy.optional = ""
-    # assert rd_cpy == ""
+    rd_cpy.optional = "HourUTC,PriceArea"
+    control.call_api(rd_cpy)
+    assert len(control.data) > 0
+    assert control.data[0].HourUTC != ""
+    assert control.data[0].HourDK == ""
+    assert control.data[0].PriceArea != ""
+    assert control.data[0].SpotPriceDKK == 0
+    assert control.data[0].SpotPriceEUR == 0
+
+    control.data = []
+    assert control.data == []
+    rd_cpy.optional = ""
+    assert rd_cpy.optional == ""
 
     rd_cpy.filter_json = json.dumps({"PriceArea": ["DK1"]})
     control.call_api(rd_cpy)
