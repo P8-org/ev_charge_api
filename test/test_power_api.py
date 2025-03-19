@@ -1,4 +1,5 @@
 import json
+import time
 from apis.EnergiData import EnergiData, EnergiDataInstance, RequestDetail
 import requests
 import datetime
@@ -64,6 +65,7 @@ def test_api_parameters():
     
     base = EnergiData()
     base.call_api(rd_cpy)
+    time.sleep(1)
 
     rd_cpy.sort_data = "SpotPriceDKK"
     control.call_api(rd_cpy)
@@ -76,6 +78,7 @@ def test_api_parameters():
     assert rd_cpy.sort_data == ""
     rd_cpy.limit = 100
     assert rd_cpy.limit == 100
+    time.sleep(1)
     
     rd_cpy.optional = "HourUTC,PriceArea"
     control.call_api(rd_cpy)
@@ -90,6 +93,8 @@ def test_api_parameters():
     assert control.data == []
     rd_cpy.optional = ""
     assert rd_cpy.optional == ""
+    time.sleep(1)
+    
 
     rd_cpy.filter_json = json.dumps({"PriceArea": ["DK1"]})
     control.call_api(rd_cpy)
@@ -103,6 +108,7 @@ def test_api_parameters():
     assert control.data == []
     rd_cpy.filter_json = ""
     assert rd_cpy.filter_json == ""
+    time.sleep(1)
 
 
     rd_cpy.offset = 3
