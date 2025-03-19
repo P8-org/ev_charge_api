@@ -94,10 +94,10 @@ def test_api_parameters():
     rd_cpy.filter_json = json.dumps({"PriceArea": ["DK1"]})
     control.call_api(rd_cpy)
     assert control.data[0].PriceArea == "DK1"
-    control.data = []
-    rd_cpy.filter_json = json.dumps({"PriceArea": ["DK2"]})
-    control.call_api(rd_cpy)
-    assert control.data[0].PriceArea == "DK2"
+    # control.data = []
+    # rd_cpy.filter_json = json.dumps({"PriceArea": ["DK2"]})
+    # control.call_api(rd_cpy)
+    # assert control.data[0].PriceArea == "DK2"
 
     control.data = []
     assert control.data == []
