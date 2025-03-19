@@ -1,13 +1,29 @@
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from database.base import Base
+from database.db import engine
+from routers import users, evs
 import datetime
 import json
-from typing import Union
 from fastapi import FastAPI
 
 from apis.EnergiData import EnergiData, RequestDetail
 from test.test_power_api import test_api_call
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # runs before startup of server
+    Base.metadata.create_all(bind=engine) # create db
+    yield
+    # runs after shutdown oftserver
+    print("app shutdown complete")
 
+
+app = FastAPI(lifespan=lifespan)
+
+
+app.include_router(users.router)
+app.include_router(evs.router)
 
 @app.get("/")
 def read_root():
@@ -31,10 +47,4 @@ def power(): # should be replaced, but proof-of-concept
     # rd = RequestDetail(startDate=last_week, endDate=now,dataset="Elspotprices", optional=option, filter_json=fil)
     e.call_api(rd)
     return e.data
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}
-
-
 
