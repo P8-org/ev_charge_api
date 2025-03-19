@@ -39,5 +39,5 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
     return db_ev
 
 @router.get("/evs")
-async def get_users(db: Session = Depends(get_db)):
+async def get_evs(db: Session = Depends(get_db)):
     return db.query(Ev).all()
