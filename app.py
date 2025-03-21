@@ -1,14 +1,16 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+import rl.rl
 from database.base import Base
 from database.db import engine
 from routers import users, evs
 import datetime
 import json
 from fastapi import FastAPI
+import rl_scheduling
 
 from apis.EnergiData import EnergiData, RequestDetail
-from test.test_power_api import test_api_call
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -48,3 +50,6 @@ def power(): # should be replaced, but proof-of-concept
     e.call_api(rd)
     return e.data
 
+@app.get("/rl_schedule") # should also be replaces. also proof of concept :)
+def schedule(num_hours: int, battery_level: float, battery_capacity: float, max_chargin_rate: float):
+    return rl_scheduling.get_schedule(num_hours, 0.2, 0.1, 100000, battery_level, battery_capacity, max_chargin_rate)

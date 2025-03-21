@@ -3,3 +3,4 @@ sqlalchemy
 requests
 pytest
 pydantic
+maturin # for rust bindings
