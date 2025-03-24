@@ -5,8 +5,20 @@ import datetime
 
 
 class RequestDetail(BaseModel):
-    startDate: datetime.date
-    endDate: datetime.date
+    '''
+    Members format
+    ----------
+    startDate: "2022-05-01", "now", "now-P1D"/"now%2P1D"(1 day before/after now, can be D/M/Y), "StartOfDay", "StartOfMonth", "StartOfYear"
+    endDate: (optional) same as startDate
+    dataset: any from energidataservice.dk
+    optional: (optional) as one string, e.g. "HourUTC,PriceArea"
+    filter_json: (optional) in json format, e.g. "{'PriceArea':['DK1','DK2']}"
+    sort: in one string, e.g. "HourUTC desc, PriceArea"
+    offset: (optional) any integer, default=0
+    limit: (optional) any integer, default=100
+    '''
+    startDate: datetime.date | str
+    endDate: datetime.date | str = ""
     dataset: str
     optional: str = ""
     filter_json: str = ""
@@ -23,15 +35,17 @@ class EnergiDataInstance(BaseModel):
     SpotPriceEUR: float = 0
 
 class EnergiData:
-    def __init__(self):
-        self.data = []
+    # def __init__(self):
+    #     self.data = []
 
-    data: list[EnergiDataInstance]
+    # data: list[EnergiDataInstance]
 
-    def call_api(self, rd: RequestDetail):
-        base_url = "https://api.energidataservice.dk/dataset/"
-        request_string = f'{rd.dataset}?start={rd.startDate}&end={rd.endDate}'
+    def __process_request(self, rd: RequestDetail):
 
+        request_string = f'{rd.dataset}?start={rd.startDate}'
+
+        if not rd.endDate == "":
+            request_string += f'&end={rd.endDate}'
         if not rd.optional == "":
             request_string += f'&columns={rd.optional}'
         if not rd.filter_json == "":
@@ -43,15 +57,68 @@ class EnergiData:
         if not rd.limit == 100:
             request_string += f'&limit={rd.limit}'
 
-        r = requests.get(base_url+request_string)
+        return request_string
+
+    def __parse_request(self, r = requests.Response):
+        data: list[EnergiDataInstance] = []
         r_json = r.json()
 
         for record in r_json["records"]:
             j = json.dumps(record)
             edi = EnergiDataInstance.model_validate_json(j)
-            self.data.append(edi)
-        
-        
+            data.append(edi)
+
+        return data
+
+    def call_api(self, rd: RequestDetail) -> list[EnergiDataInstance]:
+        base_url = "https://api.energidataservice.dk/dataset/"
+        request_string = self.__process_request(rd)
+
+        r = requests.get(base_url+request_string)
+
+        return self.__parse_request(r)
+    
+    # could make generic method... but too much work
+    def get_today(self, rd: RequestDetail) -> list[EnergiDataInstance]:
+        base_url = "https://api.energidataservice.dk/dataset/"
+        rd.startDate = "StartOfDay"
+        rd.endDate = ""
+
+        request_string = self.__process_request(rd)
+
+        r = requests.get(base_url+request_string)
+
+        return self.__parse_request(r)
+
+    # could make generic method... but too much work
+    def get_current_month(self, rd: RequestDetail) -> list[EnergiDataInstance]:
+        base_url = "https://api.energidataservice.dk/dataset/"
+        rd.startDate = "StartOfMonth"
+        rd.endDate = ""
+
+        request_string = self.__process_request(rd)
+
+        r = requests.get(base_url+request_string)
+        print(base_url+request_string)
+        return self.__parse_request(r)
+
+    # could make generic method... but too much work
+    def get_current_year(self, rd: RequestDetail) -> list[EnergiDataInstance]:
+        base_url = "https://api.energidataservice.dk/dataset/"
+        rd.startDate = "StartOfYear"
+        rd.endDate = ""
+
+        request_string = self.__process_request(rd)
+
+        r = requests.get(base_url+request_string)
+
+        print(base_url+request_string)
+        return self.__parse_request(r)
+
+
+
+
+
 
 
 
