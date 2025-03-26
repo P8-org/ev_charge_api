@@ -3,3 +3,5 @@ sqlalchemy
 requests
 pytest
 pydantic
+numpy
+torch

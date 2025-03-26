@@ -1,0 +1,14 @@
+name: AI-LAB test job
+on:
+    push:
+      paths:
+        - models/**
+jobs:
+    test-hpc:
+    runs-on: self-hosted
+    steps:
+        - name: Check out repo
+        uses: actions/checkout@v3
+        - name: AI-LAB model
+        run: |
+            sbatch t.sh
