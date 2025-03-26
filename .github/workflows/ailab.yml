@@ -1,14 +1,13 @@
 name: AI-LAB test job
 on:
-    push:
-      paths:
-        - models/**
+  push:
+
 jobs:
     test-hpc:
     runs-on: self-hosted
     steps:
         - name: Check out repo
         uses: actions/checkout@v3
-        - name: AI-LAB model
+        - name: AI-LAB hostname info
         run: |
-            sbatch t.sh
+            sbatch --output=hostname_output.txt --wrap="hostname"
