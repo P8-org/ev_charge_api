@@ -20,16 +20,15 @@ fn rl_scheduling(m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 #[pyfunction]
-fn get_schedule(num_hours: usize, alpha: f64, epsilon: f64, episodes: usize, bat_lvl: f64, bat_cap: f64, max_charging_rate: f64) -> PyResult<Vec<bool>> {
+fn get_schedule(num_hours: usize, alpha: f64, epsilon: f64, episodes: usize, bat_lvl: f64, bat_cap: f64, max_charging_rate: f64, prices: Vec<f64>, print: bool) -> PyResult<Vec<bool>> {
     let ev = EV::new(bat_cap, max_charging_rate, bat_lvl);
-    let prices = generate_prices(num_hours, 0.1, 2.0);
     let mut env = Env::new(vec![ev], Charger::new(max_charging_rate), prices, num_hours);
 
     let mut q_table = QTable::with_hasher(FxBuildHasher::default());
 
-    train(&mut q_table, episodes, &mut env, alpha, 1.0, epsilon, true);
+    train(&mut q_table, episodes, &mut env, alpha, 1.0, epsilon, print);
 
-    let schedule = run(&mut env, &q_table, true);
+    let schedule = run(&mut env, &q_table, print);
 
     return Ok(schedule.iter().map(|o| o.is_some()).collect());
 }
@@ -125,7 +124,9 @@ pub fn run(env: &mut Env, q_table: &QTable, print: bool) -> Vec<Option<usize>> {
             );
         }
     }
-    println!("Total cost: {:.2}", total_reward);
+    if print {
+        println!("Total cost: {:.2}", total_reward);
+    }
     charging_schedule
 }
 

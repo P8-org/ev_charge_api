@@ -1,6 +1,5 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-import rl.rl
 from database.base import Base
 from database.db import engine
 from routers import users, evs
@@ -53,4 +52,14 @@ def power(): # should be replaced, but proof-of-concept
 
 @app.get("/rl_schedule") # should also be replaces. also proof of concept :)
 def schedule(num_hours: int, battery_level: float, battery_capacity: float, max_chargin_rate: float):
-    return rl_scheduling.get_schedule(num_hours, 0.2, 0.1, 100000, battery_level, battery_capacity, max_chargin_rate)
+    formatted_time = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M")
+    e = EnergiData()
+    rd = RequestDetail(startDate=formatted_time, dataset="Elspotprices", filter_json=json.dumps({"PriceArea": ["DK1"]}), sort_data="HourDK ASC")
+    response = e.call_api(rd)
+    
+    hour_dk = [record.HourDK for record in response]
+    prices = [record.SpotPriceDKK / 1000 for record in response]
+    if (num_hours >= len(prices)): num_hours = len(prices)
+    schedule_bool = rl_scheduling.get_schedule(num_hours, 0.2, 0.1, 100000, battery_level, battery_capacity, max_chargin_rate, prices, False)
+
+    return [{"time": h, "price": p, "charging": b} for h, p, b in zip(hour_dk, prices, schedule_bool)]
