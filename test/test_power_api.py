@@ -6,8 +6,8 @@ import datetime
 
 
 rd = RequestDetail(
-    startDate=datetime.date(year=2024,month=4,day=17),
-    endDate=datetime.date(year=2024,month=4,day=18),
+    startDate=datetime.datetime(year=2024,month=4,day=17),
+    endDate=datetime.datetime(year=2024,month=4,day=18),
     dataset="Elspotprices",
     filter_json=json.dumps({"PriceArea": ["DK1"]}),
     limit=1
@@ -43,9 +43,8 @@ def test_api_to_data():
     assert EnergiDataInstance.model_validate(edi) # does this even do anything?
 
     e = EnergiData()
-    e.call_api(rd)
-
-    assert edi == e.data[0]
+    
+    assert edi == e.call_api(rd)[0]
 
 def test_api_parameters():
     control = EnergiData()
@@ -53,79 +52,63 @@ def test_api_parameters():
     rd_cpy = rd
 
     base = EnergiData()
-    base.call_api(rd)  
+    base_data = base.call_api(rd)  
 
     rd_cpy.limit = 10
-    control.call_api(rd_cpy)
-    assert len(base.data) != len(control.data) # just in case
-    assert len(control.data) == 10
+    control_data = control.call_api(rd_cpy)
+    assert len(base_data) != len(control_data) # just in case
+    assert len(control_data) == 10
 
-    control.data = []
-    assert control.data == []
-    
+    control_data = []
+    assert control_data == []
+
     base = EnergiData()
-    base.call_api(rd_cpy)
-    #time.sleep(1)
+    base_data = base.call_api(rd_cpy)
+    # time.sleep(1)
 
     rd_cpy.sort_data = "SpotPriceDKK"
-    control.call_api(rd_cpy)
-    assert base.data != control.data
-    
+    data = control.call_api(rd_cpy)
+    assert base_data != control_data
 
-    control.data = []
-    assert control.data == []
+
+    control_data = []
+    assert control_data == []
     rd_cpy.sort_data = ""
     assert rd_cpy.sort_data == ""
     rd_cpy.limit = 100
     assert rd_cpy.limit == 100
-    #time.sleep(1)
-    
-    rd_cpy.optional = "HourUTC,PriceArea"
-    control.call_api(rd_cpy)
-    assert len(control.data) > 0
-    assert control.data[0].HourUTC != ""
-    assert control.data[0].HourDK == ""
-    assert control.data[0].PriceArea != ""
-    assert control.data[0].SpotPriceDKK == 0
-    assert control.data[0].SpotPriceEUR == 0
+    # time.sleep(1)
 
-    control.data = []
-    assert control.data == []
+    rd_cpy.optional = "HourUTC,PriceArea"
+    control_data = control.call_api(rd_cpy)
+    assert len(control_data) > 0
+    assert control_data[0].HourUTC != ""
+    assert control_data[0].HourDK == ""
+    assert control_data[0].PriceArea != ""
+    assert control_data[0].SpotPriceDKK == 0
+    assert control_data[0].SpotPriceEUR == 0
+
+    control_data = []
+    assert control_data == []
     rd_cpy.optional = ""
     assert rd_cpy.optional == ""
-    #time.sleep(1)
-    
+    # time.sleep(1)
+
 
     rd_cpy.filter_json = json.dumps({"PriceArea": ["DK1"]})
-    control.call_api(rd_cpy)
-    assert control.data[0].PriceArea == "DK1"
-    # control.data = []
+    control_data = control.call_api(rd_cpy)
+    assert control_data[0].PriceArea == "DK1"
+    # control_data = []
     # rd_cpy.filter_json = json.dumps({"PriceArea": ["DK2"]})
     # control.call_api(rd_cpy)
-    # assert control.data[0].PriceArea == "DK2"
+    # assert control_data[0].PriceArea == "DK2"
 
-    control.data = []
-    assert control.data == []
+    control_data = []
+    assert control_data == []
     rd_cpy.filter_json = ""
     assert rd_cpy.filter_json == ""
-    #time.sleep(1)
+    # time.sleep(1)
 
 
     rd_cpy.offset = 3
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
