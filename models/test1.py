@@ -204,7 +204,7 @@ if __name__ == "__main__":
 
     # Train the agent.
     print("Training agent...")
-    trained_agent = train_agent(env, agent, num_episodes=1000)
+    trained_agent = train_agent(env, agent, num_episodes=10000)
 
     # Test the trained agent on a new episode using a greedy policy.
     state = env.reset()
