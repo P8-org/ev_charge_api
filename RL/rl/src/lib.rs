@@ -20,7 +20,7 @@ fn rl_scheduling(m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 #[pyfunction]
-fn get_schedule(num_hours: usize, alpha: f64, epsilon: f64, episodes: usize, bat_lvl: f64, bat_cap: f64, max_charging_rate: f64, prices: Vec<f64>, print: bool) -> PyResult<Vec<bool>> {
+fn get_schedule(num_hours: usize, alpha: f64, epsilon: f64, episodes: usize, bat_lvl: f64, bat_cap: f64, max_charging_rate: f64, prices: Vec<f64>, print: bool) -> PyResult<Vec<f64>> {
     let ev = EV::new(bat_cap, max_charging_rate, bat_lvl);
     let mut env = Env::new(vec![ev], Charger::new(max_charging_rate), prices, num_hours);
 
@@ -30,7 +30,7 @@ fn get_schedule(num_hours: usize, alpha: f64, epsilon: f64, episodes: usize, bat
 
     let schedule = run(&mut env, &q_table, print);
 
-    return Ok(schedule.iter().map(|o| o.is_some()).collect());
+    return Ok(schedule);
 }
 
 
@@ -101,15 +101,15 @@ pub fn train(
 }
 
 
-pub fn run(env: &mut Env, q_table: &QTable, print: bool) -> Vec<Option<usize>> {
+pub fn run(env: &mut Env, q_table: &QTable, print: bool) -> Vec<f64> {
     env.reset();
     let mut charging_schedule = vec![];
     let mut total_reward = 0.0;
     for hour in 0..env.num_hours {
         let key = env.get_hash_key();
         let action = q_table.get(&key).unwrap_or(&InnerMap::with_hasher(FxBuildHasher::new())).iter().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).unwrap_or((&None, &0.0)).0.clone();
-        charging_schedule.push(action);
         let (reward, kwh) = env.step(action);
+        charging_schedule.push(kwh.abs());
         total_reward += reward;
         if print {
             let cap = env.get_total_battery_capacity();
