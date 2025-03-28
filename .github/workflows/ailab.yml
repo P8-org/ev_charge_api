@@ -1,14 +1,16 @@
-name: AI-LAB test job
+name: AI-LAB train model
 on:
   push:
+    paths:
+      - models/**.py
 jobs:
-  test-hpc:
+  train:
     runs-on: self-hosted
     steps:
       - name: Check out repo
         uses: actions/checkout@v3
       - name: AI-LAB Train model
-        run: sbatch --output=hostname_output.txt models/t.sh
+        run: sbatch --output=training_output.txt models/t.sh
 
 
 
