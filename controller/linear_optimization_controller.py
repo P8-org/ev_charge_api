@@ -3,10 +3,9 @@ import cvxpy as cp
 import pandas as pd
 import requests as req
 import datetime as datetime
-# from apis.EnergiData import EnergiData, RequestDetail   
-def optimize_charging_schedule(prices, battery_capacity, initial_soc, max_charging_power, charging_efficiency, deadline):
+def optimize_charging_schedule_unused(prices, battery_capacity, initial_soc, max_charging_power, charging_efficiency, deadline):
     """
-    Optimize the EV charging schedule to minimize cost.
+    POC for solo optimization of schedule without RL.
     
     :param prices: List of electricity prices per time slot (in $/kWh)
     :param battery_capacity: Battery capacity (in kWh)
@@ -82,34 +81,3 @@ def adjust_rl_schedule(rl_action, E_required, P_max):
 
 
     return x.value
-
-# === Example Usage ===
-rl_action = [6.0, 7.5, 8.0, 2.0]        # RL-proposed kW for 4 hours
-E_required = 20.0                      # Must deliver at least 20 kWh
-P_max = 7.2                            # Charger max power (kW)
-
-feasible_schedule = adjust_rl_schedule(rl_action, E_required, P_max)
-
-print("RL Action:        ", rl_action)
-print("Feasible Schedule:", feasible_schedule.round(2).tolist())
-print("Total Energy:     ", round(sum(feasible_schedule), 2), "kWh")
-
-
-electricity_prices = [0.30, 0.25, 0.15, 0.20, 0.10, 0.35, 0.40, 0.18, 0.12, 0.22]  # Example hourly prices ($/kWh)
-battery_capacity = 50  # kWh
-initial_soc = 20  # Initial battery level in %
-max_charging_power = 10  # kW
-charging_efficiency = 1  # 90% efficiency
-deadline = 10  # Hours left before departure
-
-# Optimize charging schedule
-optimized_schedule = optimize_charging_schedule(electricity_prices, battery_capacity, initial_soc, max_charging_power, charging_efficiency, deadline)
-pd.options.display.float_format = '{:.2f}'.format
-# Display results
-schedule_df = pd.DataFrame({
-    "Hour": range(deadline),
-    "Price ($/kWh)": electricity_prices[:deadline],
-    "Charge (kWh)": optimized_schedule
-})
-schedule_df
-print(schedule_df)
