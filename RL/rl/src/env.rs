@@ -45,7 +45,7 @@ impl Env {
     
         if let Some(ev_idx) = self.charger.connected_ev {
             let ev = &mut self.evs[ev_idx];
-            rate = ev.get_avg_charging_rate(self.charger.max_charging_rate);
+            rate = ev.max_charging_rate.min(self.charger.max_charging_rate);
             ev.step(1, self.charger.max_charging_rate);
             let price = self.prices[self.current_hour];
             let mut reward = 0.0;

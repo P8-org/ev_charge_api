@@ -20,24 +20,10 @@ impl EV {
     }
 
     pub fn step(&mut self, action: usize, charger_max_charging_rate: f64) {
-        self.battery_level = (self.battery_level + self.get_avg_charging_rate(charger_max_charging_rate) * action as f64)
+        self.battery_level = (self.battery_level + self.max_charging_rate.min(charger_max_charging_rate) * action as f64)
             .min(self.battery_capacity);
     }
 
-    fn get_charging_rate(&self, battery_level: Option<f64>) -> f64 {
-        let battery_level = battery_level.unwrap_or(self.battery_level);
-        let percentage = battery_level / self.battery_capacity;
-        (-0.9 * percentage + 1.0) * self.max_charging_rate
-    }
-
-    pub fn get_avg_charging_rate(&mut self, max_charging_rate: f64) -> f64 {
-        let prev = self.get_charging_rate(None).min(max_charging_rate);
-        let prev_bat = self.battery_level;
-        self.battery_level = (self.battery_level + prev).min(self.battery_capacity);
-        let avg = (prev + self.get_charging_rate(None).min(max_charging_rate)) / 2.0;
-        self.battery_level = prev_bat;
-        avg.min(self.battery_capacity - self.battery_level)
-    }
 
     pub fn reset(&mut self) {
         self.battery_level = self.initial_battery_level;
@@ -49,7 +35,7 @@ impl EV {
         let time_step = 1.0;
 
         while self.battery_level < self.battery_capacity {
-            let rate = self.get_avg_charging_rate(max_charging_rate);
+            let rate = self.max_charging_rate.min(max_charging_rate);
             let energy_added = rate * time_step;
             self.battery_level += energy_added;
             if self.battery_level > self.battery_capacity {
