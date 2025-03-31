@@ -5,10 +5,8 @@ from database.db import engine
 from routers import users, evs
 import datetime
 import json
-from fastapi import FastAPI
 
 from apis.EnergiData import EnergiData, RequestDetail
-from test.test_power_api import test_api_call
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,9 +31,11 @@ def read_root():
 def power(): # should be replaced, but proof-of-concept
 
     e = EnergiData()
-    now = datetime.date(year=2024,month=4,day=18)
-    last_week = datetime.date(year=2024,month=4,day=17)
-    lim = 24
+    # now = datetime.date(year=2024,month=4,day=18)
+    # last_week = datetime.date(year=2024,month=4,day=17)
+    last_week = "StartOfYear-P2Y"
+    # now = "now"
+    lim = 0
     option = "HourUTC,PriceArea"
     fil = json.dumps({"PriceArea": ["DK1"]})
     sort = "HourUTC"
@@ -44,8 +44,9 @@ def power(): # should be replaced, but proof-of-concept
     # rd = RequestDetail(startDate=last_week, endDate=now, dataset="Elspotprices", optional=option, limit=lim, filter_json=fil, sort_data=sort, offset=offset)
     # rd = RequestDetail(startDate=last_week, endDate=now,dataset="Elspotprices",limit=lim, filter_json=fil)
     # rd = RequestDetail(startDate=last_week, endDate=now,dataset="Elspotprices", optional=option, filter_json=fil)
-    rd = RequestDetail(startDate=last_week, endDate=now,dataset="Elspotprices", filter_json=fil)
+    # rd = RequestDetail(startDate=last_week, endDate=now,dataset="Elspotprices", filter_json=fil, limit=lim)
+    rd = RequestDetail(startDate=last_week, dataset="Elspotprices", filter_json=fil, limit=lim)
     # e.call_api(rd)
     # return e.data
-    return e.get_today(rd)
+    return e.call_api(rd)
 

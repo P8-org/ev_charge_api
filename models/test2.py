@@ -18,29 +18,22 @@ from apis.EnergiData import EnergiData, RequestDetail
 # ------------------------------
 class ElectricChargeEnv:
     def __init__(self, prices, num_cars, num_chargers):
-        """
-        prices: list or np.array of electricity prices for 48 hours (the forecast)
-        num_cars: total number of cars that need charging
-        num_chargers: available number of chargers per time step
-        """
         self.prices = np.array(prices)
         self.num_cars = num_cars
         self.num_chargers = num_chargers
-        self.total_time = len(prices)
+        self.total_time = len(prices)  # Now supports any length of prices
         self.max_price = np.max(self.prices)
         self.reset()
 
     def reset(self):
         self.t = 0
-        # Create a list of car dictionaries with an ID and charging status.
         self.cars = [{'id': i, 'charged': False, 'charge_time': None} for i in range(self.num_cars)]
         self.uncharged_car_ids = list(range(self.num_cars))
         self.done = False
-        self.schedule = []  # list of tuples: (time, list of car ids charged in that time step)
+        self.schedule = []
         return self._get_state()
 
     def _get_state(self):
-        # State: [normalized current time, remaining_cars ratio, full normalized price forecast]
         norm_time = self.t / (self.total_time - 1)
         norm_remaining = len(self.uncharged_car_ids) / self.num_cars
         norm_prices = self.prices / (self.max_price + 1e-6)
@@ -48,31 +41,22 @@ class ElectricChargeEnv:
         return state.astype(np.float32)
 
     def step(self, action):
-        """
-        action: integer from 0 to num_chargers.
-        If action > number of remaining cars, it is clipped.
-        """
         valid_action = min(action, len(self.uncharged_car_ids), self.num_chargers)
-        # Compute cost for charging valid_action cars this hour.
         cost = self.prices[self.t] * valid_action
-        reward = -cost  # negative cost as reward
+        reward = -cost
 
-        # Mark cars as charged.
         cars_charged_now = []
         for _ in range(valid_action):
             car_id = self.uncharged_car_ids.pop(0)
             self.cars[car_id]['charged'] = True
             self.cars[car_id]['charge_time'] = self.t
             cars_charged_now.append(car_id)
-        # Record schedule: which car ids got charged at hour self.t.
-        self.schedule.append((self.t, cars_charged_now))
         
+        self.schedule.append((self.t, cars_charged_now))
         self.t += 1
 
-        # Check for termination: either time is up or all cars are charged.
         if self.t >= self.total_time:
             self.done = True
-            # Penalty for any uncharged cars.
             if self.uncharged_car_ids:
                 reward -= 10 * len(self.uncharged_car_ids)
         elif not self.uncharged_car_ids:
@@ -87,11 +71,11 @@ class QNetwork(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(QNetwork, self).__init__()
         self.net = nn.Sequential(
-            nn.Linear(input_dim, 5120),
+            nn.Linear(input_dim, 512),
             nn.ReLU(),
-            nn.Linear(5120, 5120),
+            nn.Linear(512, 128),
             nn.ReLU(),
-            nn.Linear(5120, 128),
+            nn.Linear(128, 128),
             nn.ReLU(),
             nn.Linear(128, output_dim)
         )
@@ -204,6 +188,10 @@ def run():
         limit=100
     )
     data = EnergiData().call_api(rd)
+    # print(prices)
+    t = data[0].HourDK
+    a = parser.parse(t)
+    # print(a)
     prices = []
     times = []
     for i in data:
@@ -224,14 +212,12 @@ def run():
     env = ElectricChargeEnv(prices_np, num_cars, num_chargers)
 
     # Define state dimension: [normalized time, normalized remaining cars] + 48 normalized prices.
-    # state_dim = 2 + len(prices)
-    print(len(data))
     state_dim = 2 + len(data)
     # Define action dimension as (num_chargers + 1) because we can choose to charge 0...num_chargers cars.
     action_dim = num_chargers + 1
 
     # Create the DQN agent.
-    agent = DQNAgent(state_dim, action_dim, lr=1e-5)
+    agent = DQNAgent(state_dim, action_dim, lr=1e-3)
 
     # Train the agent.
     print("Training agent...")
