@@ -6,8 +6,8 @@ from routers import users, evs
 import datetime
 import json
 from fastapi import FastAPI
-import rl_scheduling
-from controller.linear_optimization_controller import adjust_rl_schedule
+from modules.rl_short_term_scheduling import generate_schedule
+from modules.linear_optimization_controller import adjust_rl_schedule
 from apis.EnergiData import EnergiData, RequestDetail
 import numpy as np
 
@@ -59,8 +59,7 @@ def schedule(num_hours: int, battery_level: float, battery_capacity: float, max_
     
     hour_dk = [record.HourDK for record in response]
     prices = [record.SpotPriceDKK / 1000 for record in response]
-    if (num_hours >= len(prices)): num_hours = len(prices)
-    schedule = rl_scheduling.get_schedule(num_hours, 0.2, 0.1, 100000, battery_level, battery_capacity, max_chargin_rate, prices, False)
+    schedule = generate_schedule(num_hours, battery_level, battery_capacity, max_chargin_rate, prices)
     adjusted_schedule = adjust_rl_schedule(schedule,battery_capacity, max_chargin_rate)
     print(np.array(schedule))
     print(adjusted_schedule)
