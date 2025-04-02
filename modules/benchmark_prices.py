@@ -8,10 +8,7 @@ class Benchmark:
         
     def optimized_schedule_price(self):
         optimized_prices = [a * b for a,b in zip(self.schedule,self.prices)]
-        optimized_price = 0
-        for i in optimized_prices:
-            optimized_price += i
-        return optimized_price
+        return sum(optimized_prices)
         
 
     def greedy_schedule_price(self):
