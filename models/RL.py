@@ -3,6 +3,7 @@ import json
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn.parallel import data_parallel
 import torch.optim as optim
 import random
 from collections import deque
@@ -87,11 +88,9 @@ class QNetwork(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(QNetwork, self).__init__()
         self.net = nn.Sequential(
-            nn.Linear(input_dim, 5120),
+            nn.Linear(input_dim, 128),
             nn.ReLU(),
-            nn.Linear(5120, 5120),
-            nn.ReLU(),
-            nn.Linear(5120, 128),
+            nn.Linear(128, 128),
             nn.ReLU(),
             nn.Linear(128, output_dim)
         )
@@ -197,11 +196,11 @@ def run():
     # np.random.seed(0)
     # prices = np.random.uniform(low=0.2, high=0.8, size=48)
     rd = RequestDetail(
-        startDate="StartOfMonth",
+        startDate="StartOfDay-P0D",
         dataset="Elspotprices",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
         # optional= "HourDK,SpotPriceDKK",
-        limit=100
+        limit=0
     )
     data = EnergiData().call_api(rd)
     prices = []
@@ -225,17 +224,22 @@ def run():
 
     # Define state dimension: [normalized time, normalized remaining cars] + 48 normalized prices.
     # state_dim = 2 + len(prices)
-    print(len(data))
-    state_dim = 2 + len(data)
-    # Define action dimension as (num_chargers + 1) because we can choose to charge 0...num_chargers cars.
-    action_dim = num_chargers + 1
+    data_points = prices_np
+    print(len(data_points))
+    while len(data_points) > 0:
+        state_dim = 2 + len(data)
+        # Define action dimension as (num_chargers + 1) because we can choose to charge 0...num_chargers cars.
+        action_dim = num_chargers + 1
 
-    # Create the DQN agent.
-    agent = DQNAgent(state_dim, action_dim, lr=1e-5)
+        # Create the DQN agent.
+        agent = DQNAgent(state_dim, action_dim, lr=1e-5)
 
-    # Train the agent.
-    print("Training agent...")
-    trained_agent = train_agent(env, agent, num_episodes=400)
+        # Train the agent.
+        print("Training agent...")
+        env.prices = data_points[:49]
+        data_points = prices_np[48:]
+        trained_agent = train_agent(env, agent, num_episodes=400)
+
 
     # Test the trained agent on a new episode using a greedy policy.
     state = env.reset()
