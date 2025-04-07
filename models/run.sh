@@ -8,4 +8,4 @@
 #SBATCH --gres=gpu:3            # Allocated GPUs
 #SBATCH --time=12:00:00         # Maximum run time
  
-singularity exec --bind /my-virtual-env:/my-virtual-env /ceph/container/python/python_3.10.sif /bin/bash -c "source /my-virtual-env/bin/activate && python3 ./run_RL.py"
+singularity exec --bind /my-virtual-env:/my-virtual-env /ceph/container/python/python_3.10.sif /bin/bash -c "source /my-virtual-env/bin/activate && python3 /ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/run_RL.py"

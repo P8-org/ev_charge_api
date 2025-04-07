@@ -2,7 +2,7 @@ name: AI-LAB train model
 on:
   push:
     paths:
-      - models/**.py
+      - models/**
 jobs:
   train:
     runs-on: self-hosted
