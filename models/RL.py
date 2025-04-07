@@ -187,7 +187,7 @@ def train_agent(env, agent, num_episodes=500):
         if (episode + 1) % 50 == 0:
             print(f"Episode {episode+1}, Total Reward: {total_reward:.2f}, Epsilon: {agent.epsilon:.3f}")
     return agent
-
+ 
 # ------------------------------
 # Example Usage
 # ------------------------------
