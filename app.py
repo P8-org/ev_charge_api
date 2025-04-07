@@ -8,6 +8,8 @@ import json
 from fastapi import FastAPI
 from modules.rl_short_term_scheduling import generate_schedule
 from modules.linear_optimization_controller import adjust_rl_schedule
+from modules.benchmark_prices import Benchmark
+
 from apis.EnergiData import EnergiData, RequestDetail
 import numpy as np
 
@@ -63,4 +65,6 @@ def schedule(num_hours: int, battery_level: float, battery_capacity: float, max_
     adjusted_schedule = adjust_rl_schedule(schedule,battery_capacity, max_chargin_rate)
     print(np.array(schedule))
     print(adjusted_schedule)
+    b = Benchmark(adjusted_schedule,prices,battery_capacity,max_chargin_rate)
+    b.compare()
     return [{"time": h, "price": p, "charging": b} for h, p, b in zip(hour_dk, prices, adjusted_schedule)]
