@@ -5,3 +5,5 @@ pytest
 pydantic
 numpy
 torch
+python-dateutil
+gymnasium

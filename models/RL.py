@@ -11,7 +11,7 @@ from rich import print
 from dateutil import parser
 
 from apis.EnergiData import EnergiData, RequestDetail
-
+ 
 
 
 # ------------------------------
@@ -196,7 +196,7 @@ def run():
     # np.random.seed(0)
     # prices = np.random.uniform(low=0.2, high=0.8, size=48)
     rd = RequestDetail(
-        startDate="StartOfDay-P0D",
+        startDate="StartOfDay-P5D",
         dataset="Elspotprices",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
         # optional= "HourDK,SpotPriceDKK",
