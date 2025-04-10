@@ -276,7 +276,7 @@ def run():
         agent = DQNAgent(state_dim, action_dim)
         
     agent.load("models/dqn_model.pth")
-    
+
     print("\n[bold underline]Testing Trained Agent[/bold underline]")
     for i, (prices_48, times_48) in enumerate(test_periods):
         print(f"\n[Testing] Period {i+1}/{len(test_periods)} starting at {times_48[0]}")
@@ -290,7 +290,7 @@ def run():
                 q_values = agent.q_network(state_tensor)
             action = int(torch.argmax(q_values, dim=1).item())
             state, _, done, _, _ = env.step(action)
-    
+
         # Print the schedule
         print("Optimal Charging Schedule (per hour):")
         for hour, car_ids in env.schedule:
