@@ -292,7 +292,7 @@ def run():
             state, _, done, _, _ = env.step(action)
 
         # Print the schedule
-        print("Optimal Charging Schedule (per hour):")
+        print("Optimal Charging Schedule (per hour): ")
         for hour, car_ids in env.schedule:
             if car_ids:
                 car_list = ", ".join([f"Car {cid}" for cid in car_ids])
