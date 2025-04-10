@@ -21,6 +21,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: model
-          path: models/dqn_model.pth
+          path: /ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/models/dqn_model.pth
 
 
