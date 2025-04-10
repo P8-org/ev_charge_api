@@ -278,25 +278,26 @@ def run():
     agent.load("models/dqn_model.pth")
 
     print("\n[bold underline]Testing Trained Agent[/bold underline]")
-    for i, (prices_48, times_48) in enumerate(test_periods):
-        print(f"\n[Testing] Period {i+1}/{len(test_periods)} starting at {times_48[0]}")
-        env = ElectricChargeEnv(prices_48, num_cars, num_chargers)
-        print(type(agent))
-        state, _ = env.reset()
-        done = False
-        while not done:
-            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.device)
-            with torch.no_grad():
-                q_values = agent.q_network(state_tensor)
-            action = int(torch.argmax(q_values, dim=1).item())
-            state, _, done, _, _ = env.step(action)
+    prices_48, times_48 = train_periods[-1]
+    # print(f"\n[Testing] Period {i+1}/{len(test_periods)} starting at {times_48[0]}")
+    print(f"\n[Testing] starting at {times_48[0]}")
+    env = ElectricChargeEnv(prices_48, num_cars, num_chargers)
+    print(type(agent))
+    state, _ = env.reset()
+    done = False
+    while not done:
+        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.device)
+        with torch.no_grad():
+            q_values = agent.q_network(state_tensor)
+        action = int(torch.argmax(q_values, dim=1).item())
+        state, _, done, _, _ = env.step(action)
 
-        # Print the schedule
-        print("Optimal Charging Schedule (per hour): ")
-        for hour, car_ids in env.schedule:
-            if car_ids:
-                car_list = ", ".join([f"Car {cid}" for cid in car_ids])
-                charge_time = times_48[hour]
-                charge_time_dt = charge_time.astype('M8[s]').tolist()
-                charge_time_str = charge_time_dt.strftime("%Y-%m-%d %H:%M")
-                print(f"At {charge_time_str} (Price: {prices_48[hour]:.2f}) -> Charged: {car_list} (Hour {hour})")
+    # Print the schedule
+    print("Optimal Charging Schedule (per hour): ")
+    for hour, car_ids in env.schedule:
+        if car_ids:
+            car_list = ", ".join([f"Car {cid}" for cid in car_ids])
+            charge_time = times_48[hour]
+            charge_time_dt = charge_time.astype('M8[s]').tolist()
+            charge_time_str = charge_time_dt.strftime("%Y-%m-%d %H:%M")
+            print(f"At {charge_time_str} (Price: {prices_48[hour]:.2f}) -> Charged: {car_list} (Hour {hour})")
