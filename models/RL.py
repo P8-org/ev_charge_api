@@ -215,7 +215,7 @@ def train_agent(env, agent, num_episodes=500):
 def run():
     """Runs the training and testing process for the electric charging environment."""
     rd = RequestDetail(
-        startDate="StartOfDay-P2D",
+        startDate="StartOfDay-P5D",
         dataset="Elspotprices",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
         limit=0
@@ -236,9 +236,9 @@ def run():
         times_48 = times_np[start_idx:start_idx + 48]
         periods.append((prices_48, times_48))
 
-    # Shuffle and split into train/test
-    random.seed(42)
-    random.shuffle(periods)
+    # # Shuffle and split into train/test
+    # random.seed(42)
+    # random.shuffle(periods)
 
     split_idx = int(0.8 * len(periods))
     train_periods = periods[:split_idx]

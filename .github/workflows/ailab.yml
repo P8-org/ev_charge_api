@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - models/**
+      - .github/workflows/ailab.yml
 jobs:
   train:
     runs-on: self-hosted
