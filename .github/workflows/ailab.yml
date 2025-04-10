@@ -17,6 +17,10 @@ jobs:
         run: srun singularity exec --bind ~/my-virtual-env:/my-virtual-env /ceph/container/python/python_3.10.sif /bin/bash -c "source /my-virtual-env/bin/activate && python3 -m pip install -r requirements.txt"
       - name: AI-LAB Train model
         run: sbatch --output=training_output.txt models/run.sh
-
+      - name: Archive model
+        uses: actions/upload-artifact@v4
+        with:
+          name: model
+          path: models/dqn_model.pth
 
 

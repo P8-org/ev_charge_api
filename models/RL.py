@@ -1,85 +1,91 @@
-from datetime import datetime
-import json
+from time import strftime
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn.parallel import data_parallel
 import torch.optim as optim
 import random
 from collections import deque
+import json
 from rich import print
 from dateutil import parser
+import os.path
 
 from apis.EnergiData import EnergiData, RequestDetail
  
+import gymnasium as gym
+from gymnasium import spaces
 
+class ElectricChargeEnv(gym.Env):
+    """
+    Custom environment for optimizing electric car charging schedules.
+    """
+    metadata = {"render_modes": ["human"], "render_fps": 1}
 
-# ------------------------------
-# Custom Environment Definition
-# ------------------------------
-class ElectricChargeEnv:
     def __init__(self, prices, num_cars, num_chargers):
-        """
-        prices: list or np.array of electricity prices for 48 hours (the forecast)
-        num_cars: total number of cars that need charging
-        num_chargers: available number of chargers per time step
-        """
-        self.prices = np.array(prices)
+        super(ElectricChargeEnv, self).__init__()
+        
+        self.prices = np.array(prices, dtype=np.float32)
         self.num_cars = num_cars
         self.num_chargers = num_chargers
         self.total_time = len(prices)
         self.max_price = np.max(self.prices)
+        
+        # Define action and observation spaces
+        self.action_space = spaces.Discrete(num_chargers + 1)  # Charge 0 to num_chargers cars
+        self.observation_space = spaces.Box(low=0, high=1, shape=(2 + self.total_time,), dtype=np.float32)
+        
         self.reset()
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+        
         self.t = 0
-        # Create a list of car dictionaries with an ID and charging status.
         self.cars = [{'id': i, 'charged': False, 'charge_time': None} for i in range(self.num_cars)]
         self.uncharged_car_ids = list(range(self.num_cars))
         self.done = False
-        self.schedule = []  # list of tuples: (time, list of car ids charged in that time step)
-        return self._get_state()
+        self.schedule = []  # (time, list of car ids charged at that time)
+        
+        return self._get_state(), {}
 
     def _get_state(self):
-        # State: [normalized current time, remaining_cars ratio, full normalized price forecast]
+        """Returns the current state as a normalized feature vector."""
         norm_time = self.t / (self.total_time - 1)
         norm_remaining = len(self.uncharged_car_ids) / self.num_cars
         norm_prices = self.prices / (self.max_price + 1e-6)
-        state = np.concatenate(([norm_time, norm_remaining], norm_prices))
-        return state.astype(np.float32)
+        return np.concatenate(([norm_time, norm_remaining], norm_prices)).astype(np.float32)
 
     def step(self, action):
-        """
-        action: integer from 0 to num_chargers.
-        If action > number of remaining cars, it is clipped.
-        """
+        """Executes a step in the environment given an action."""
         valid_action = min(action, len(self.uncharged_car_ids), self.num_chargers)
-        # Compute cost for charging valid_action cars this hour.
         cost = self.prices[self.t] * valid_action
-        reward = -cost  # negative cost as reward
+        reward = -cost  # Minimize cost (negative reward)
 
-        # Mark cars as charged.
         cars_charged_now = []
         for _ in range(valid_action):
             car_id = self.uncharged_car_ids.pop(0)
             self.cars[car_id]['charged'] = True
             self.cars[car_id]['charge_time'] = self.t
             cars_charged_now.append(car_id)
-        # Record schedule: which car ids got charged at hour self.t.
+
         self.schedule.append((self.t, cars_charged_now))
-        
         self.t += 1
 
-        # Check for termination: either time is up or all cars are charged.
         if self.t >= self.total_time:
             self.done = True
-            # Penalty for any uncharged cars.
             if self.uncharged_car_ids:
-                reward -= 10 * len(self.uncharged_car_ids)
+                reward -= 10 * len(self.uncharged_car_ids)  # Penalty for uncharged cars
         elif not self.uncharged_car_ids:
             self.done = True
 
-        return self._get_state(), reward, self.done, {}
+        return self._get_state(), reward, self.done, False, {}
+
+    def render(self, mode="human"):
+        """Optional render method to visualize the schedule."""
+        print(f"Time Step {self.t}: Schedule -> {self.schedule}")
+
+    def close(self):
+        """Clean up if necessary."""
+        pass
 
 # ------------------------------
 # Q-Network Definition
@@ -107,7 +113,7 @@ class DQNAgent:
         self.q_network = QNetwork(state_dim, action_dim).to(self.device)
         self.target_network = QNetwork(state_dim, action_dim).to(self.device)
         self.target_network.load_state_dict(self.q_network.state_dict())
-        self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
+        self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=lr)
         self.gamma = gamma
 
         self.epsilon = epsilon_start
@@ -116,21 +122,16 @@ class DQNAgent:
 
         self.replay_buffer = deque(maxlen=10000)
         self.batch_size = 64
+        self.action_dim = action_dim
 
     def select_action(self, state):
-        # Epsilon-greedy action selection.
-        if random.random() < self.epsilon:
-            return random.randint(0, self.action_dim - 1)
+        if np.random.rand() < self.epsilon:
+            return np.random.randint(self.action_dim)
         else:
             state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
             with torch.no_grad():
                 q_values = self.q_network(state_tensor)
             return int(torch.argmax(q_values, dim=1).item())
-
-    @property
-    def action_dim(self):
-        # Action dimension is defined by the network output dimension.
-        return self.q_network.net[-1].out_features
 
     def update(self):
         if len(self.replay_buffer) < self.batch_size:
@@ -149,7 +150,7 @@ class DQNAgent:
         with torch.no_grad():
             next_q_values = self.target_network(next_states).max(1, keepdim=True)[0]
         target = rewards + self.gamma * next_q_values * (1 - dones)
-        loss = nn.MSELoss()(q_values, target)
+        loss = torch.nn.MSELoss()(q_values, target)
         
         self.optimizer.zero_grad()
         loss.backward()
@@ -158,19 +159,40 @@ class DQNAgent:
     def update_target(self):
         self.target_network.load_state_dict(self.q_network.state_dict())
 
+    def save(self, path):
+        torch.save({
+            'q_network_state_dict': self.q_network.state_dict(),
+            'target_network_state_dict': self.target_network.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'epsilon': self.epsilon
+        }, path)
+        print(f"[green]Model saved to {path}[/green]")
+
+    def load(self, path):
+        if os.path.isfile(path):
+            checkpoint = torch.load(path, map_location=self.device)
+            self.q_network.load_state_dict(checkpoint['q_network_state_dict'])
+            self.target_network.load_state_dict(checkpoint['target_network_state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            self.epsilon = checkpoint.get('epsilon', 1.0)
+            print(f"[cyan]Model loaded from {path}[/cyan]")
+        else:
+            print(f"[red]No model found at {path}[/red]")
+
+
 # ------------------------------
 # Training Loop
 # ------------------------------
 def train_agent(env, agent, num_episodes=500):
     update_target_every = 10  # update target network every 10 episodes
     for episode in range(num_episodes):
-        state = env.reset()
+        state, _ = env.reset()
         total_reward = 0
         done = False
 
         while not done:
             action = agent.select_action(state)
-            next_state, reward, done, _ = env.step(action)
+            next_state, reward, done, _, _ = env.step(action)
             total_reward += reward
 
             agent.replay_buffer.append((state, action, reward, next_state, float(done)))
@@ -178,7 +200,6 @@ def train_agent(env, agent, num_episodes=500):
 
             agent.update()
         
-        # Decay epsilon after each episode.
         agent.epsilon = max(agent.epsilon_end, agent.epsilon * agent.epsilon_decay)
 
         if episode % update_target_every == 0:
@@ -187,81 +208,95 @@ def train_agent(env, agent, num_episodes=500):
         if (episode + 1) % 50 == 0:
             print(f"Episode {episode+1}, Total Reward: {total_reward:.2f}, Epsilon: {agent.epsilon:.3f}")
     return agent
- 
+
 # ------------------------------
 # Example Usage
 # ------------------------------
 def run():
-    # For demonstration, create a dummy price forecast for 48 hours.
-    # np.random.seed(0)
-    # prices = np.random.uniform(low=0.2, high=0.8, size=48)
+    """Runs the training and testing process for the electric charging environment."""
     rd = RequestDetail(
-        startDate="StartOfDay-P5D",
+        startDate="StartOfDay-P2D",
         dataset="Elspotprices",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
-        # optional= "HourDK,SpotPriceDKK",
         limit=0
     )
     data = EnergiData().call_api(rd)
-    prices = []
-    times = []
-    for i in data:
-        prices.append(i.SpotPriceDKK/1000)
-        times.append(parser.parse(i.HourDK))
-    # print(prices)
-    # print(times)
+    print(f"Days of data: {len(data)/24}")
+
+    prices = [i.SpotPriceDKK / 1000 for i in data]
+    times = [parser.parse(i.HourDK) for i in data]
+
     prices_np = np.asarray(prices, dtype=np.float32)
     times_np = np.asarray(times, dtype=np.datetime64)
-    # print(prices_np)
-    # print(times_np)
 
-    # Set the number of cars and chargers.
-    num_cars = 3      # e.g., 10 cars to charge
-    num_chargers = 1   # e.g., 3 chargers available each hour
+    # Create 48-hour periods
+    periods = []
+    for start_idx in range(0, len(prices_np) - 47, 24):
+        prices_48 = prices_np[start_idx:start_idx + 48]
+        times_48 = times_np[start_idx:start_idx + 48]
+        periods.append((prices_48, times_48))
 
-    # Create the environment.
-    env = ElectricChargeEnv(prices_np, num_cars, num_chargers)
+    # Shuffle and split into train/test
+    random.seed(42)
+    random.shuffle(periods)
 
-    # Define state dimension: [normalized time, normalized remaining cars] + 48 normalized prices.
-    # state_dim = 2 + len(prices)
-    data_points = prices_np
-    print(len(data_points))
-    while len(data_points) > 0:
-        state_dim = 2 + len(data)
-        # Define action dimension as (num_chargers + 1) because we can choose to charge 0...num_chargers cars.
-        action_dim = num_chargers + 1
+    split_idx = int(0.8 * len(periods))
+    train_periods = periods[:split_idx]
+    test_periods = periods[split_idx:]
 
-        # Create the DQN agent.
-        agent = DQNAgent(state_dim, action_dim, lr=1e-5)
+    num_cars = 3
+    num_chargers = 1
 
-        # Train the agent.
-        print("Training agent...")
-        env.prices = data_points[:49]
-        data_points = prices_np[48:]
-        trained_agent = train_agent(env, agent, num_episodes=400)
+    agent = None
 
+    if not os.path.isfile("models/dqn_model.pth"):
+        print(f"Number of training periods: {len(train_periods)}")
+        for i, (prices_48, times_48) in enumerate(train_periods):
+            print(f"\n[Training] Period {i+1}/{len(train_periods)} starting at {times_48[0]}")
+            env = ElectricChargeEnv(prices_48, num_cars, num_chargers)
+            state_dim = env.observation_space.shape[0]
+            action_dim = env.action_space.n
 
-    # Test the trained agent on a new episode using a greedy policy.
-    state = env.reset()
-    done = False
-    while not done:
-        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(trained_agent.device)
-        with torch.no_grad():
-            q_values = trained_agent.q_network(state_tensor)
-        action = int(torch.argmax(q_values, dim=1).item())
-        state, reward, done, _ = env.step(action)
+            if agent is None:
+                agent = DQNAgent(state_dim, action_dim, lr=1e-4)
 
-    # Display the charging schedule per car.
-    print("\nOptimal Charging Schedule (per hour):")
-    for hour, car_ids in env.schedule:
-        if car_ids:
-            car_list = ", ".join([f"Car {cid}" for cid in car_ids])
-            print(f"At hour {hour} (Price: {prices_np[hour]:.2f}) -> Charged: {car_list}")
+            train_agent(env, agent, num_episodes=300)
 
-    # Optionally, print a summary for each car.
-    print("\nCharging Summary per Car:")
-    for car in env.cars:
-        if car['charged']:
-            print(f"Car {car['id']} charged at hour {car['charge_time']}")
-        else:
-            print(f"Car {car['id']} was not charged!")
+        # if (isinstance(agent, DQNAgent)):
+            # Save the trained model
+            agent.save("models/dqn_model.pth")
+
+    # ------------------------------
+    # Testing the Trained Agent
+    # ------------------------------
+    if agent is None:
+        env = ElectricChargeEnv(np.zeros(48), num_cars, num_chargers)  # dummy env to get dimensions
+        state_dim = env.observation_space.shape[0]
+        action_dim = env.action_space.n
+        agent = DQNAgent(state_dim, action_dim)
+        
+    agent.load("models/dqn_model.pth")
+
+    print("\n[bold underline]Testing Trained Agent[/bold underline]")
+    for i, (prices_48, times_48) in enumerate(test_periods):
+        print(f"\n[Testing] Period {i+1}/{len(test_periods)} starting at {times_48[0]}")
+        env = ElectricChargeEnv(prices_48, num_cars, num_chargers)
+        print(type(agent))
+        state, _ = env.reset()
+        done = False
+        while not done:
+            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.device)
+            with torch.no_grad():
+                q_values = agent.q_network(state_tensor)
+            action = int(torch.argmax(q_values, dim=1).item())
+            state, _, done, _, _ = env.step(action)
+
+        # Print the schedule
+        print("Optimal Charging Schedule (per hour):")
+        for hour, car_ids in env.schedule:
+            if car_ids:
+                car_list = ", ".join([f"Car {cid}" for cid in car_ids])
+                charge_time = times_48[hour]
+                charge_time_dt = charge_time.astype('M8[s]').tolist()
+                charge_time_str = charge_time_dt.strftime("%Y-%m-%d %H:%M")
+                print(f"At {charge_time_str} (Price: {prices_48[hour]:.2f}) -> Charged: {car_list} (Hour {hour})")

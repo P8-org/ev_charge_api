@@ -8,6 +8,7 @@ from collections import deque
 import json
 from rich import print
 from dateutil import parser
+import os.path
 
 from apis.EnergiData import EnergiData, RequestDetail
  
@@ -124,7 +125,6 @@ class DQNAgent:
         self.action_dim = action_dim
 
     def select_action(self, state):
-        # Epsilon-greedy action selection
         if np.random.rand() < self.epsilon:
             return np.random.randint(self.action_dim)
         else:
@@ -158,6 +158,26 @@ class DQNAgent:
 
     def update_target(self):
         self.target_network.load_state_dict(self.q_network.state_dict())
+
+    def save(self, path):
+        torch.save({
+            'q_network_state_dict': self.q_network.state_dict(),
+            'target_network_state_dict': self.target_network.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'epsilon': self.epsilon
+        }, path)
+        print(f"[green]Model saved to {path}[/green]")
+
+    def load(self, path):
+        if os.path.isfile(path):
+            checkpoint = torch.load(path, map_location=self.device)
+            self.q_network.load_state_dict(checkpoint['q_network_state_dict'])
+            self.target_network.load_state_dict(checkpoint['target_network_state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            self.epsilon = checkpoint.get('epsilon', 1.0)
+            print(f"[cyan]Model loaded from {path}[/cyan]")
+        else:
+            print(f"[red]No model found at {path}[/red]")
 
 
 # ------------------------------
@@ -195,7 +215,7 @@ def train_agent(env, agent, num_episodes=500):
 def run():
     """Runs the training and testing process for the electric charging environment."""
     rd = RequestDetail(
-        startDate="StartOfYear",
+        startDate="StartOfDay-P0D",
         dataset="Elspotprices",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
         limit=0
@@ -229,9 +249,14 @@ def run():
         # Create the DQN agent
         agent = DQNAgent(state_dim, action_dim, lr=1e-4)
 
-        # Train the agent
-        print(f"\nTraining agent for period starting at {times_48[0]}")
-        trained_agent = train_agent(env, agent, num_episodes=1000)
+        if os.path.isfile("dqn_model.pth"):
+            trained_agent = agent
+            trained_agent.load("dqn_model.pth")
+            break
+        else:
+            # Train the agent
+            print(f"\nTraining agent for period starting at {times_48[0]}")
+            trained_agent = train_agent(env, agent, num_episodes=400)
 
         # Test the trained agent on a new episode using a greedy policy
         state, _ = env.reset()
@@ -253,3 +278,5 @@ def run():
             charge_time_str = charge_time_dt.strftime("%Y-%m-%d %H:%M")
             print(f"At {charge_time_str} (Price: {prices_48[hour]:.2f}) -> Charged: {car_list} (Hour {hour})")
 
+    if not os.path.isfile("dqn_model.pth"):
+        trained_agent.save("dqn_model.pth")

@@ -3,9 +3,9 @@
 #SBATCH --job-name=test  # Name of your job
 #SBATCH --output=test-out.out     # Name of the output file
 #SBATCH --error=file-test.err # Name of the error file
-#SBATCH --mem=24G               # Memory
-#SBATCH --cpus-per-task=15      # CPUs per task
-#SBATCH --gres=gpu:3            # Allocated GPUs
+#SBATCH --mem=86G               # Memory
+#SBATCH --cpus-per-task=64      # CPUs per task
+#SBATCH --gres=gpu:5            # Allocated GPUs
 #SBATCH --time=12:00:00         # Maximum run time
 
 
