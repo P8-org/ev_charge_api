@@ -215,7 +215,7 @@ def train_agent(env, agent, num_episodes=500):
 def run():
     """Runs the training and testing process for the electric charging environment."""
     rd = RequestDetail(
-        startDate="StartOfDay-P5D",
+        startDate="StartOfYear-P1Y",
         dataset="Elspotprices",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
         limit=0
@@ -250,8 +250,8 @@ def run():
     agent = None
 
     if not os.path.isfile("models/dqn_model.pth"):
-        print(f"Number of training periods: {len(train_periods)}")
-        for i, (prices_48, times_48) in enumerate(train_periods):
+        print(f"Number of training periods: {len(train_periods[:-1])}")
+        for i, (prices_48, times_48) in enumerate(train_periods[:-1]):
             print(f"\n[Training] Period {i+1}/{len(train_periods)} starting at {times_48[0]}")
             env = ElectricChargeEnv(prices_48, num_cars, num_chargers)
             state_dim = env.observation_space.shape[0]
