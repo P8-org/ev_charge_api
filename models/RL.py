@@ -31,9 +31,14 @@ class ElectricChargeEnv(gym.Env):
         self.total_time = len(prices)
         self.max_price = np.max(self.prices)
 
-        # Extra time features: hour of day, day of week
+        # Define action and observation spaces FIRST
+        self.action_space = spaces.Discrete(num_chargers + 1)  # 0 to num_chargers cars
+
+        # Includes: norm_time, norm_remaining, hour_of_day, day_of_week, and normalized price vector
         self.observation_space = spaces.Box(
-            low=0, high=1, shape=(4 + self.total_time,), dtype=np.float32
+            low=0, high=1,
+            shape=(4 + self.total_time,),
+            dtype=np.float32
         )
 
         self.reset()
