@@ -230,10 +230,10 @@ def train_agent(env, agent, num_episodes=500):
 def run():
     """Runs the training and testing process for the electric charging environment."""
     rd = RequestDetail(
-        startDate="StartOfYear-P10D",
+        startDate="StartOfYear-P2Y",
         dataset="Elspotprices",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
-        limit=0
+        limit=48*0
     )
     data = EnergiData().call_api(rd)
     print(f"Days of data: {len(data)/24}")
@@ -267,7 +267,7 @@ def run():
     if not os.path.isfile("models/dqn_model.pth"):
         print(f"Number of training periods: {len(train_periods[:-1])}")
         for i, (prices_48, times_48) in enumerate(train_periods[:-1]):
-            print(f"\n[Training] Period {i+1}/{len(train_periods)} starting at {times_48[0]}")
+            print(f"\n[Training] Period {i+1}/{len(train_periods[:-1])} starting at {times_48[0]}")
             env = ElectricChargeEnv(prices_48, times_48, num_cars, num_chargers)
             state_dim = env.observation_space.shape[0]
             action_dim = env.action_space.n
@@ -279,7 +279,7 @@ def run():
 
         # if (isinstance(agent, DQNAgent)):
             # Save the trained model
-            agent.save("models/dqn_model.pth")
+        agent.save("models/dqn_model.pth")
 
     # ------------------------------
     # Testing the Trained Agent
