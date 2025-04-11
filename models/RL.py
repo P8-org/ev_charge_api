@@ -89,7 +89,7 @@ class ElectricChargeEnv(gym.Env):
         elif not self.uncharged_car_ids:
             done = True
 
-        self.t += 1
+        self.t = min(self.t + 1, self.total_time - 1)  # Prevent t from going out of bounds
         self.done = done
 
         return self._get_state(), reward, self.done, False, {}
@@ -285,7 +285,7 @@ def run():
     # Testing the Trained Agent
     # ------------------------------
     if agent is None:
-        env = ElectricChargeEnv(np.zeros(48), num_cars, num_chargers)  # dummy env to get dimensions
+        env = ElectricChargeEnv(np.zeros(48), np.zeros(48), num_cars, num_chargers)  # dummy env to get dimensions
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.n
         agent = DQNAgent(state_dim, action_dim)
@@ -312,7 +312,8 @@ def run():
     for hour, car_ids in env.schedule:
         if car_ids:
             car_list = ", ".join([f"Car {cid}" for cid in car_ids])
-            charge_time = times_48[hour]
+            hour_index = min(hour, len(times_48) - 1)  # prevent out of bounds
+            charge_time = times_48[hour_index]
             charge_time_dt = charge_time.astype('M8[s]').tolist()
             charge_time_str = charge_time_dt.strftime("%Y-%m-%d %H:%M")
-            print(f"At {charge_time_str} (Price: {prices_48[hour]:.2f}) -> Charged: {car_list} (Hour {hour})")
+            print(f"At {charge_time_str} (Price: {prices_48[hour_index]:.2f}) -> Charged: {car_list} (Hour {hour})")
