@@ -21,19 +21,21 @@ class ElectricChargeEnv(gym.Env):
     """
     metadata = {"render_modes": ["human"], "render_fps": 1}
 
-    def __init__(self, prices, num_cars, num_chargers):
+    def __init__(self, prices, times, num_cars, num_chargers):
         super(ElectricChargeEnv, self).__init__()
-        
+
         self.prices = np.array(prices, dtype=np.float32)
+        self.times = np.array(times)
         self.num_cars = num_cars
         self.num_chargers = num_chargers
         self.total_time = len(prices)
         self.max_price = np.max(self.prices)
-        
-        # Define action and observation spaces
-        self.action_space = spaces.Discrete(num_chargers + 1)  # Charge 0 to num_chargers cars
-        self.observation_space = spaces.Box(low=0, high=1, shape=(2 + self.total_time,), dtype=np.float32)
-        
+
+        # Extra time features: hour of day, day of week
+        self.observation_space = spaces.Box(
+            low=0, high=1, shape=(4 + self.total_time,), dtype=np.float32
+        )
+
         self.reset()
 
     def reset(self, seed=None, options=None):
@@ -48,11 +50,16 @@ class ElectricChargeEnv(gym.Env):
         return self._get_state(), {}
 
     def _get_state(self):
-        """Returns the current state as a normalized feature vector."""
         norm_time = self.t / (self.total_time - 1)
         norm_remaining = len(self.uncharged_car_ids) / self.num_cars
         norm_prices = self.prices / (self.max_price + 1e-6)
-        return np.concatenate(([norm_time, norm_remaining], norm_prices)).astype(np.float32)
+
+        # Time features
+        current_time = self.times[self.t].astype('datetime64[s]').astype(object)
+        hour_of_day = current_time.hour / 23.0
+        day_of_week = current_time.weekday() / 6.0
+
+        return np.concatenate(([norm_time, norm_remaining, hour_of_day, day_of_week], norm_prices)).astype(np.float32)
 
     def step(self, action):
         """Executes a step in the environment given an action."""
@@ -215,7 +222,7 @@ def train_agent(env, agent, num_episodes=500):
 def run():
     """Runs the training and testing process for the electric charging environment."""
     rd = RequestDetail(
-        startDate="StartOfYear-P1Y",
+        startDate="StartOfYear-P10D",
         dataset="Elspotprices",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
         limit=0
@@ -253,7 +260,7 @@ def run():
         print(f"Number of training periods: {len(train_periods[:-1])}")
         for i, (prices_48, times_48) in enumerate(train_periods[:-1]):
             print(f"\n[Training] Period {i+1}/{len(train_periods)} starting at {times_48[0]}")
-            env = ElectricChargeEnv(prices_48, num_cars, num_chargers)
+            env = ElectricChargeEnv(prices_48, times_48, num_cars, num_chargers)
             state_dim = env.observation_space.shape[0]
             action_dim = env.action_space.n
 
@@ -281,7 +288,7 @@ def run():
     prices_48, times_48 = train_periods[-1]
     # print(f"\n[Testing] Period {i+1}/{len(test_periods)} starting at {times_48[0]}")
     print(f"\n[Testing] starting at {times_48[0]}")
-    env = ElectricChargeEnv(prices_48, num_cars, num_chargers)
+    env = ElectricChargeEnv(prices_48, times_48, num_cars, num_chargers)
     print(type(agent))
     state, _ = env.reset()
     done = False
