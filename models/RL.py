@@ -67,10 +67,9 @@ class ElectricChargeEnv(gym.Env):
         return np.concatenate(([norm_time, norm_remaining, hour_of_day, day_of_week], norm_prices)).astype(np.float32)
 
     def step(self, action):
-        """Executes a step in the environment given an action."""
         valid_action = min(action, len(self.uncharged_car_ids), self.num_chargers)
         cost = self.prices[self.t] * valid_action
-        reward = -cost  # Minimize cost (negative reward)
+        reward = -cost
 
         cars_charged_now = []
         for _ in range(valid_action):
@@ -80,14 +79,18 @@ class ElectricChargeEnv(gym.Env):
             cars_charged_now.append(car_id)
 
         self.schedule.append((self.t, cars_charged_now))
-        self.t += 1
 
-        if self.t >= self.total_time:
-            self.done = True
+        # CHECK before updating self.t
+        done = False
+        if self.t + 1 >= self.total_time:
+            done = True
             if self.uncharged_car_ids:
-                reward -= 10 * len(self.uncharged_car_ids)  # Penalty for uncharged cars
+                reward -= 10 * len(self.uncharged_car_ids)
         elif not self.uncharged_car_ids:
-            self.done = True
+            done = True
+
+        self.t += 1
+        self.done = done
 
         return self._get_state(), reward, self.done, False, {}
 
