@@ -13,7 +13,7 @@ router = APIRouter()
 
 class EvCreate(BaseModel):
     name: str
-    battery_level: float
+    car_mode_id: int
 
 @router.post("/evs")
 async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
@@ -22,11 +22,10 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
     ev.current_charge = ev_create.battery_level
     ev.current_charging_power = 0
 
-    ev.car_model = db.query(CarModel).all()[0]
+    ev.car_model = db.query(CarModel).get(ev_create.car_mode_id)
 
     constraint = Constraint()
     constraint.charged_by = datetime.datetime.now()
-    constraint.charged_by += datetime.timedelta(1, 0, 0)
     constraint.target_percentage = 0.8
 
     schedule = Schedule()
