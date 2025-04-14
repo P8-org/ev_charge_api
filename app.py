@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from database.base import Base
 from database.db import engine
-from routers import carmodels, users, evs, schedules, constraints
+from routers import carmodels, evs, schedules, constraints
 import datetime
 import json
 from fastapi import FastAPI
@@ -25,7 +25,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-app.include_router(users.router)
 app.include_router(evs.router)
 app.include_router(schedules.router)
 app.include_router(constraints.router)
