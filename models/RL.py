@@ -123,7 +123,7 @@ class QNetwork(nn.Module):
 # DQN Agent and Training Setup
 # ------------------------------
 class DQNAgent:
-    def __init__(self, state_dim, action_dim, lr=1e-3, gamma=0.99, epsilon_start=1.0, epsilon_end=0.05, epsilon_decay=0.995):
+    def __init__(self, state_dim, action_dim, lr=1e-3, gamma=0.99, epsilon_start=1.0, epsilon_end=0.1, epsilon_decay=0.995):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.q_network = QNetwork(state_dim, action_dim).to(self.device)
         self.target_network = QNetwork(state_dim, action_dim).to(self.device)
@@ -198,7 +198,7 @@ class DQNAgent:
 # ------------------------------
 # Training Loop
 # ------------------------------
-def train_agent(env, agent, num_episodes=500):
+def train_agent(env, agent, num_episodes=500, print_iter=False):
     update_target_every = 10  # update target network every 10 episodes
     for episode in range(num_episodes):
         state, _ = env.reset()
@@ -231,15 +231,16 @@ def run():
     """Runs the training and testing process for the electric charging environment."""
     rd = RequestDetail(
         startDate="StartOfYear-P2Y",
+        endDate="StartOfYear%2P1D",
         dataset="Elspotprices",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
-        limit=48*0
+        limit=24*0 # Default=0, to limit set to a minimum of 72 hours
     )
     data = EnergiData().call_api(rd)
     print(f"Days of data: {len(data)/24}")
 
     prices = [i.SpotPriceDKK / 1000 for i in data]
-    times = [parser.parse(i.HourDK) for i in data]
+    times = [np.datetime64(i.HourDK) for i in data]
 
     prices_np = np.asarray(prices, dtype=np.float32)
     times_np = np.asarray(times, dtype=np.datetime64)
@@ -251,13 +252,9 @@ def run():
         times_48 = times_np[start_idx:start_idx + 48]
         periods.append((prices_48, times_48))
 
-    # # Shuffle and split into train/test
-    # random.seed(42)
-    # random.shuffle(periods)
-
-    split_idx = int(0.8 * len(periods))
-    train_periods = periods[:split_idx]
-    test_periods = periods[split_idx:]
+    # split_idx = int(0.8 * len(periods))
+    train_periods = periods[1:]
+    test_periods = periods[:1]
 
     num_cars = 3
     num_chargers = 1
@@ -265,9 +262,9 @@ def run():
     agent = None
 
     if not os.path.isfile("models/dqn_model.pth"):
-        print(f"Number of training periods: {len(train_periods[:-1])}")
-        for i, (prices_48, times_48) in enumerate(train_periods[:-1]):
-            print(f"\n[Training] Period {i+1}/{len(train_periods[:-1])} starting at {times_48[0]}")
+        print(f"Number of training periods: {len(train_periods)}")
+        for i, (prices_48, times_48) in enumerate(train_periods):
+            print(f"\n[Training] Period {i+1}/{len(train_periods)} starting at {times_48[0]}")
             env = ElectricChargeEnv(prices_48, times_48, num_cars, num_chargers)
             state_dim = env.observation_space.shape[0]
             action_dim = env.action_space.n
@@ -277,9 +274,9 @@ def run():
 
             train_agent(env, agent, num_episodes=300)
 
-        # if (isinstance(agent, DQNAgent)):
-            # Save the trained model
-        agent.save("models/dqn_model.pth")
+        if (isinstance(agent, DQNAgent)):
+        # Save the trained model
+            agent.save("models/dqn_model.pth")
 
     # ------------------------------
     # Testing the Trained Agent
@@ -289,15 +286,13 @@ def run():
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.n
         agent = DQNAgent(state_dim, action_dim)
-        
+
     agent.load("models/dqn_model.pth")
 
     print("\n[bold underline]Testing Trained Agent[/bold underline]")
-    prices_48, times_48 = train_periods[-1]
-    # print(f"\n[Testing] Period {i+1}/{len(test_periods)} starting at {times_48[0]}")
+    prices_48, times_48 = test_periods[0]
     print(f"\n[Testing] starting at {times_48[0]}")
     env = ElectricChargeEnv(prices_48, times_48, num_cars, num_chargers)
-    print(type(agent))
     state, _ = env.reset()
     done = False
     while not done:
