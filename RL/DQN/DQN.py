@@ -7,7 +7,6 @@ import random
 from collections import deque
 import json
 from rich import print
-from dateutil import parser
 import os.path
 
 from apis.EnergiData import EnergiData, RequestDetail

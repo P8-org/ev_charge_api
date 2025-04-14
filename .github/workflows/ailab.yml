@@ -2,7 +2,7 @@ name: AI-LAB train model
 on:
   push:
     paths:
-      - models/**
+      - RL/DQN/**
       - .github/workflows/ailab.yml
 jobs:
   train:
@@ -11,9 +11,9 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@v3
-      - name: Refresh Nodes
-        run: |
-          refresh-nodes
+      # - name: Refresh Nodes
+      #   run: |
+      #     refresh-nodes
       - name: Install virtualenv
         run: srun singularity exec /ceph/container/python/python_3.10.sif pip install --user virtualenv
       - name: Make virtualenv
@@ -21,7 +21,7 @@ jobs:
       - name: Install requirements
         run: srun singularity exec --bind ~/my-virtual-env:/my-virtual-env /ceph/container/python/python_3.10.sif /bin/bash -c "source /my-virtual-env/bin/activate && python3 -m pip install -r requirements.txt"
       - name: AI-LAB Train model
-        run: sbatch --output=training_output.txt models/run.sh
+        run: sbatch --output=training_output.txt RL/DQN/run.sh
       - name: Check if there are jobs in the queue
         run: |
           echo "Waiting for no jobs in Slurm queue..."
@@ -41,5 +41,5 @@ jobs:
         with:
           name: model
           path: /ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/models/dqn_model.pth
-
-
+      - name: Print Results
+        run: echo /ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/training_output.txt 
