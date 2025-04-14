@@ -1,10 +1,13 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+import requests
+from rich import print
 from database.base import Base
 from database.db import engine
 from routers import users, evs
 import datetime
 import json
+import os
 
 from apis.EnergiData import EnergiData, RequestDetail
 
@@ -49,4 +52,34 @@ def power(): # should be replaced, but proof-of-concept
     # e.call_api(rd)
     # return e.data
     return e.call_api(rd)
+
+
+@app.get("/start_dqn_train")
+def dqn_start_train():
+    GITHUB_TOKEN = os.getenv("GITHUB_TOKEN") 
+    EVENT_TYPE = "custom-event"
+
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+
+    data = {
+        "event_type": EVENT_TYPE,
+        "client_payload": {
+            "from": "fastapi",
+            "info": "anything you want here"
+        }
+    }
+    url = "https://api.github.com/repos/P8-org/ev_charge_api"
+    r = requests.post(url, headers=headers, json=data)
+
+@app.get("/dqn_train_status")
+def dqn_train_status():
+    r = requests.get("https://api.github.com/repos/P8-org/ev_charge_api/actions/workflows/ailab.yml/runs")
+    # print(r.json()["workflow_runs"][0]["status"])
+    status = r.json()["workflow_runs"][0]["status"]
+    # return f"DQN Training Status: {status}"
+    return status
+
 

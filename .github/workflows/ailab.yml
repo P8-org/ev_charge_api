@@ -4,6 +4,8 @@ on:
     paths:
       - RL/DQN/**
       - .github/workflows/ailab.yml
+  repository_dispatch:
+    types: [custom-event]
 jobs:
   train:
     runs-on: self-hosted
