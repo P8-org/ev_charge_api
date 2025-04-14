@@ -11,6 +11,9 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@v3
+      - name: Refresh Nodes
+        run: |
+          refresh-nodes
       - name: Install virtualenv
         run: srun singularity exec /ceph/container/python/python_3.10.sif pip install --user virtualenv
       - name: Make virtualenv
