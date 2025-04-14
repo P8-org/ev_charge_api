@@ -4,24 +4,6 @@ from sqlalchemy.orm import Session, Mapped, relationship
 from database.base import Base
 
 
-# class Ev(Base):
-#     __tablename__ = "evs"
-#     id = Column(Integer, primary_key=True, index=True)
-#     name: str = Column(String)
-#     battery_capacity: float = Column(Float)
-#     """ Battery capacity (kwH) """
-#     battery_level: float = Column(Float)
-#     """ Current battery level (kwH) """
-#     max_charging_speed: float = Column(Float)
-#     """ Max charging speed (kw) """
-#     constraint: Mapped["Constraint"] = relationship(
-#         back_populates="ev", cascade="all, delete-orphan"
-#     )
-#     schedule: Mapped["Schedule"] = relationship(
-#         back_populates="ev", cascade="all, delete-orphan"
-#     )
-
-
 class Constraint(Base):
     __tablename__ = "constraints"
     id = Column(Integer, primary_key=True, index=True)
@@ -36,6 +18,7 @@ class Schedule(Base):
     id = Column(Integer, primary_key=True, index=True)
     start = Column(DateTime, nullable=False)
     end = Column(DateTime, nullable=False)
+    num_hours = Column(Integer, nullable=False)
     schedule_data = Column(String)  # csv format, example: "20, 20, 0, 0, 0, 10" 
     ev_id = Column(Integer, ForeignKey("user_evs.id"), nullable=False)
     ev: Mapped["UserEV"] = relationship(back_populates="schedule")

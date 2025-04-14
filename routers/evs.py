@@ -14,6 +14,7 @@ router = APIRouter()
 class EvCreate(BaseModel):
     name: str
     car_mode_id: int
+    battery_level: float
 
 @router.post("/evs")
 async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
@@ -32,6 +33,7 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
     schedule.end = datetime.datetime.now()
     schedule.start = datetime.datetime.now()
     schedule.schedule_data = ""
+    schedule.num_hours = 0
 
     ev.constraint = constraint
     ev.schedule = schedule

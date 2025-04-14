@@ -15,7 +15,7 @@ from models.models import UserEV
 
 router = APIRouter()
 
-@router.post("/schedules/generate")
+@router.post("/schedules/generate/{ev_id}")
 async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     ev: UserEV = db.query(UserEV).options(
         joinedload(UserEV.constraint),
@@ -24,7 +24,7 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
 
     duration: datetime.timedelta = ev.constraint.charged_by - datetime.datetime.now()
     num_hours = math.ceil(duration.total_seconds() / 60 / 60)
-    target_kwh = ev.constraint.target_percentage * ev.battery_capacity
+    target_kwh = ev.constraint.target_percentage * ev.car_model.battery_capacity
     formatted_time = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M")
     e = EnergiData()
     rd = RequestDetail(startDate=formatted_time, dataset="Elspotprices", filter_json=json.dumps({"PriceArea": ["DK1"]}), sort_data="HourDK ASC")
@@ -35,5 +35,5 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     hour_dk = [record.HourDK for record in response]
     prices = [record.SpotPriceDKK / 1000 for record in response]
 
-    schedule = generate_schedule(num_hours, ev.battery_level, target_kwh, ev.max_charging_speed, prices, False)
+    schedule = generate_schedule(num_hours, ev.current_charge, target_kwh, ev.car_model.max_charging_power, prices, False)
     return [{"time": h, "price": p, "charging": b} for h, p, b in zip(hour_dk, prices, schedule)]

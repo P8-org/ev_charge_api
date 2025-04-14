@@ -18,7 +18,7 @@ class CarModelCreate(BaseModel):
     max_charging_power: float
 
 @router.post("/carmodels")
-async def create_ev(form: CarModelCreate, db: Session = Depends(get_db)):
+async def create_car_model(form: CarModelCreate, db: Session = Depends(get_db)):
     new_model = CarModel()
     new_model.model_name = form.name
     new_model.model_year = form.year
@@ -31,7 +31,7 @@ async def create_ev(form: CarModelCreate, db: Session = Depends(get_db)):
     return new_model
 
 @router.get("/carmodels")
-async def get_evs(query: str = None, db: Session = Depends(get_db)):
+async def get_car_models(query: str = None, db: Session = Depends(get_db)):
     if query is not None:
         models = db.query(CarModel).filter(CarModel.model_name.contains(query)).all()
     else:

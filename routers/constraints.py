@@ -6,5 +6,5 @@ from database.db import get_db
 router = APIRouter()
 
 @router.post("/constraints")
-async def post_constraint(ev_id: int, db: Session = Depends(get_db)):
+async def post_constraint(db: Session = Depends(get_db)):
     pass
