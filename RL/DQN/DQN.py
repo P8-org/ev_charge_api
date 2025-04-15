@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+from dateutil import parser
 from time import strftime
 import numpy as np
 import torch
@@ -230,20 +232,22 @@ def run():
     """Runs the training and testing process for the electric charging environment."""
     rd = RequestDetail(
         startDate="StartOfYear-P1M",
-        # endDate="StartOfYear%2P1D",
+        # startDate="StartOfDay-P3D",
+        endDate="StartOfDay-P1M",
         dataset="Elspotprices",
+        # optional="HourDK,SpotPriceDKK",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
-        limit=24*5, # Default=0, to limit set to a minimum of 72 hours
+        limit=24*0, # Default=0, to limit set to a minimum of 72 hours
         # offset=24*0
     )
     data = EnergiData().call_api(rd)
     print(f"Days of data: {len(data)/24}")
 
-    prices = [i.SpotPriceDKK / 1000 for i in data]
-    times = [np.datetime64(i.HourDK) for i in data]
+    prices = [i.SpotPriceDKK / 1000 for i in data][::-1]
+    times = [np.datetime64(i.HourDK) for i in data][::-1]
 
-    prices_np = np.asarray(prices, dtype=np.float32)[::-1]
-    times_np = np.asarray(times, dtype=np.datetime64)[::-1]
+    prices_np = np.asarray(prices, dtype=np.float32)
+    times_np = np.asarray(times, dtype=np.datetime64)
 
     # Create 48-hour periods
     periods = []
@@ -251,7 +255,6 @@ def run():
         prices_48 = prices_np[start_idx:start_idx + 24]
         times_48 = times_np[start_idx:start_idx + 24]
         periods.append((prices_48, times_48))
-        # print(start_idx)
 
     # split_idx = int(0.8 * len(periods))
     split_idx = len(periods) - 1 
