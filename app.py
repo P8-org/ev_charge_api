@@ -1,8 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from database.base import Base
-from database.db import engine
-from routers import users, evs
+from database.db import engine, seed_db
+from routers import carmodels, evs, schedules, constraints
 import datetime
 import json
 from fastapi import FastAPI
@@ -17,6 +17,7 @@ import numpy as np
 async def lifespan(app: FastAPI):
     # runs before startup of server
     Base.metadata.create_all(bind=engine) # create db
+    seed_db()
     yield
     # runs after shutdown oftserver
     print("app shutdown complete")
@@ -25,8 +26,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-app.include_router(users.router)
 app.include_router(evs.router)
+app.include_router(schedules.router)
+app.include_router(constraints.router)
+app.include_router(carmodels.router)
 
 @app.get("/")
 def read_root():
@@ -52,7 +55,7 @@ def power(): # should be replaced, but proof-of-concept
     # return e.data
     return e.get_today(rd)
 
-@app.get("/rl_schedule") # should also be replaces. also proof of concept :)
+@app.get("/rl_schedule") # should also be replaced. also proof of concept :)
 def schedule(num_hours: int, battery_level: float, battery_capacity: float, max_chargin_rate: float):
     formatted_time = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M")
     e = EnergiData()
