@@ -73,7 +73,7 @@ def dqn_start_train():
     }
 
     data = {
-        "ref": "main",  
+        "ref": "RL",  
         "inputs": {
             "from": "fastapi",
             "info": "Start Model Training"
@@ -92,9 +92,8 @@ def dqn_start_train():
 @app.get("/dqn_train_status")
 def dqn_train_status():
     r = requests.get("https://api.github.com/repos/P8-org/ev_charge_api/actions/workflows/ailab.yml/runs")
-    # print(r.json()["workflow_runs"][0]["status"])
     status = r.json()["workflow_runs"][0]["status"]
-    # return f"DQN Training Status: {status}"
+    print(f"DQN Training Status: {status}")
     return status
 
 
