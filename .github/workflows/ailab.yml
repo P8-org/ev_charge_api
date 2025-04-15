@@ -4,8 +4,15 @@ on:
   #   paths:
   #     - RL/DQN/**
   #     - .github/workflows/ailab.yml
-  repository_dispatch:
-    types: [custom-event]
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "fastapi"
+        required: true
+        default: "fastapi"
+      info:
+        description: "Start Model Training"
+        required: false
 
 jobs:
   train:
