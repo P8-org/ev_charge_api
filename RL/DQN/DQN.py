@@ -226,14 +226,15 @@ def train_agent(env, agent, num_episodes=500, print_iter=False):
     return agent
 
 # ------------------------------
-# Example Usage
+# Usage
 # ------------------------------
 def run():
     """Runs the training and testing process for the electric charging environment."""
     rd = RequestDetail(
         startDate="StartOfYear-P1M",
         # startDate="StartOfDay-P3D",
-        endDate="StartOfDay-P1M",
+        # endDate="StartOfDay-P1M",
+        endDate="StartOfDay-P5D",
         dataset="Elspotprices",
         # optional="HourDK,SpotPriceDKK",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
@@ -260,6 +261,7 @@ def run():
     split_idx = len(periods) - 1 
     train_periods = periods[:split_idx]
     test_periods = periods[split_idx:]
+    # print(test_periods)
 
     num_cars = 3
     num_chargers = 1
