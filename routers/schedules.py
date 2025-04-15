@@ -2,8 +2,6 @@ import datetime
 import json
 import math
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-from sqlalchemy import Column, Integer, String, Float, DateTime
 from sqlalchemy.orm import Session, joinedload
 from apis.EnergiData import EnergiData, RequestDetail
 from modules.rl_short_term_scheduling import generate_schedule

@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
-from database.base import Base
 from database.db import get_db
 from models.models import CarModel, Constraint, UserEV, Schedule
 from modules.rl_short_term_scheduling import generate_schedule
@@ -13,7 +12,7 @@ router = APIRouter()
 
 class EvCreate(BaseModel):
     name: str
-    car_mode_id: int
+    car_model_id: int
     battery_level: float
 
 @router.post("/evs")
@@ -23,7 +22,7 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
     ev.current_charge = ev_create.battery_level
     ev.current_charging_power = 0
 
-    ev.car_model = db.query(CarModel).get(ev_create.car_mode_id)
+    ev.car_model = db.query(CarModel).get(ev_create.car_model_id)
 
     constraint = Constraint()
     constraint.charged_by = datetime.datetime.now()

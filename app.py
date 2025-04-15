@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from database.base import Base
-from database.db import engine
+from database.db import engine, seed_db
 from routers import carmodels, evs, schedules, constraints
 import datetime
 import json
@@ -17,6 +17,7 @@ import numpy as np
 async def lifespan(app: FastAPI):
     # runs before startup of server
     Base.metadata.create_all(bind=engine) # create db
+    seed_db()
     yield
     # runs after shutdown oftserver
     print("app shutdown complete")

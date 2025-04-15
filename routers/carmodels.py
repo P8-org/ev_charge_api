@@ -19,11 +19,12 @@ class CarModelCreate(BaseModel):
 
 @router.post("/carmodels")
 async def create_car_model(form: CarModelCreate, db: Session = Depends(get_db)):
-    new_model = CarModel()
-    new_model.model_name = form.name
-    new_model.model_year = form.year
-    new_model.battery_capacity = form.battery_capacity
-    new_model.max_charging_power = form.max_charging_power
+    new_model = CarModel(
+        model_name=form.name,
+        model_year=form.year,
+        battery_capacity=form.battery_capacity,
+        max_charging_power=form.max_charging_power
+    )
 
     db.add(new_model)
     db.commit()

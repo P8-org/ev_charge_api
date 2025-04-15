@@ -25,6 +25,12 @@ class Schedule(Base):
 
 
 class CarModel(Base):
+    def __init__(self, model_name: str, model_year: int, battery_capacity: float, max_charging_power: float):
+        self.model_name = model_name
+        self.model_year = model_year
+        self.battery_capacity = battery_capacity
+        self.max_charging_power = max_charging_power
+        
     __tablename__ = "car_models"
     id = Column(Integer, primary_key=True, index=True)
     model_name = Column(String(64), nullable=False)
