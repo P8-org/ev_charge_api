@@ -47,3 +47,4 @@ def seed_db():
         ]
         db.add_all(models)
         db.commit()
+    db.close()
