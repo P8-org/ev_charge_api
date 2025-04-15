@@ -268,7 +268,7 @@ def run():
 
     agent = None
 
-    if not os.path.isfile("models/dqn_model.pth"):
+    if not os.path.isfile("dqn_model.pth"):
         print(f"Number of training periods: {len(train_periods)}")
         for i, (prices_48, times_48) in enumerate(train_periods):
             print(f"\n[Training] Period {i+1}/{len(train_periods)} starting at {times_48[0]}")
@@ -284,8 +284,7 @@ def run():
 
         if (isinstance(agent, DQNAgent)):
         # Save the trained model
-            os.makedirs("models", exist_ok=True)
-            agent.save("models/dqn_model.pth")
+            agent.save("dqn_model.pth")
 
     # ------------------------------
     # Testing the Trained Agent
@@ -297,8 +296,8 @@ def run():
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.n
         agent = DQNAgent(state_dim, action_dim)
-    print(agent.action_dim)
-    agent.load("models/dqn_model.pth")
+
+    agent.load("dqn_model.pth")
 
     print("\n[bold underline]Testing Trained Agent[/bold underline]")
     print(f"\n[Testing] starting at {times_48[0]}")
