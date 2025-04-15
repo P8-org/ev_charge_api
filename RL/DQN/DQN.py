@@ -233,7 +233,7 @@ def run():
         # endDate="StartOfYear%2P1D",
         dataset="Elspotprices",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
-        limit=24*20, # Default=0, to limit set to a minimum of 72 hours
+        limit=24*5, # Default=0, to limit set to a minimum of 72 hours
         # offset=24*0
     )
     data = EnergiData().call_api(rd)
@@ -254,46 +254,48 @@ def run():
         # print(start_idx)
 
     # split_idx = int(0.8 * len(periods))
-    train_periods = periods[1:]
-    test_periods = periods[:1]
+    split_idx = len(periods) - 1 
+    train_periods = periods[:split_idx]
+    test_periods = periods[split_idx:]
 
     num_cars = 3
     num_chargers = 1
 
     agent = None
 
-    os.makedirs("models", exist_ok=True)
     if not os.path.isfile("models/dqn_model.pth"):
         print(f"Number of training periods: {len(train_periods)}")
-        for i, (prices_48, times_48) in enumerate(reversed(train_periods)):
+        for i, (prices_48, times_48) in enumerate(train_periods):
             print(f"\n[Training] Period {i+1}/{len(train_periods)} starting at {times_48[0]}")
             env = ElectricChargeEnv(prices_48, times_48, num_cars, num_chargers)
             state_dim = env.observation_space.shape[0]
             action_dim = env.action_space.n
-            print(len(prices_48))
 
             if agent is None:
                 agent = DQNAgent(state_dim, action_dim, lr=1e-4)
 
+            print(agent.action_dim)
             train_agent(env, agent, num_episodes=300)
 
         if (isinstance(agent, DQNAgent)):
         # Save the trained model
+            os.makedirs("models", exist_ok=True)
             agent.save("models/dqn_model.pth")
 
     # ------------------------------
     # Testing the Trained Agent
     # ------------------------------
+    prices_48, times_48 = test_periods[0]
+
     if agent is None:
-        env = ElectricChargeEnv(np.zeros(48), np.zeros(48), num_cars, num_chargers)  # dummy env to get dimensions
+        env = ElectricChargeEnv(prices_48, times_48, num_cars, num_chargers)
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.n
         agent = DQNAgent(state_dim, action_dim)
-
+    print(agent.action_dim)
     agent.load("models/dqn_model.pth")
 
     print("\n[bold underline]Testing Trained Agent[/bold underline]")
-    prices_48, times_48 = test_periods[0]
     print(f"\n[Testing] starting at {times_48[0]}")
     env = ElectricChargeEnv(prices_48, times_48, num_cars, num_chargers)
     state, _ = env.reset()
