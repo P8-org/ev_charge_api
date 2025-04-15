@@ -233,7 +233,7 @@ def run():
         # endDate="StartOfYear%2P1D",
         dataset="Elspotprices",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
-        limit=24*5, # Default=0, to limit set to a minimum of 72 hours
+        limit=24*20, # Default=0, to limit set to a minimum of 72 hours
         # offset=24*0
     )
     data = EnergiData().call_api(rd)
@@ -256,13 +256,13 @@ def run():
     # split_idx = int(0.8 * len(periods))
     train_periods = periods[1:]
     test_periods = periods[:1]
-    print(train_periods)
 
     num_cars = 3
     num_chargers = 1
 
     agent = None
 
+    os.makedirs("models", exist_ok=True)
     if not os.path.isfile("models/dqn_model.pth"):
         print(f"Number of training periods: {len(train_periods)}")
         for i, (prices_48, times_48) in enumerate(reversed(train_periods)):
