@@ -39,6 +39,8 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     schedule = generate_schedule(num_hours, ev.current_charge, target_kwh, ev.car_model.max_charging_power, prices, False)
     schedule = adjust_rl_schedule(schedule, target_kwh - ev.current_charge, ev.car_model.max_charging_power)
 
+    schedule = [0 if abs(x) < 1e-4 else x for x in schedule] #round very small numbers to 0
+
     ev.schedule.num_hours = len(schedule)
     ev.schedule.schedule_data = ", ".join(map(str, schedule))
     ev.schedule.start = datetime.datetime.now()
