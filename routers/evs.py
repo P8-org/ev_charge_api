@@ -25,7 +25,7 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
     ev.car_model = db.query(CarModel).get(ev_create.car_model_id)
 
     constraint = Constraint()
-    constraint.charged_by = datetime.datetime.now()
+    constraint.charged_by = datetime.datetime.now() + datetime.timedelta(days=1)
     constraint.target_percentage = 0.8
 
     schedule = Schedule()

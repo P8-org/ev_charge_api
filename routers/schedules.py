@@ -22,6 +22,9 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
         joinedload(UserEV.schedule)
     ).get(ev_id)
 
+    if ev is None:
+        raise HTTPException(status_code=404, detail=f"EV with id {ev_id} not found")
+
     duration: datetime.timedelta = ev.constraint.charged_by - datetime.datetime.now()
     num_hours = math.ceil(duration.total_seconds() / 60 / 60)
     if num_hours <= 0: raise HTTPException(status_code=400, detail="Charging duration is negative")
@@ -34,5 +37,15 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     prices = [record.SpotPriceDKK / 1000 for record in response]
 
     schedule = generate_schedule(num_hours, ev.current_charge, target_kwh, ev.car_model.max_charging_power, prices, False)
-    schedule = adjust_rl_schedule(schedule, ev.car_model.battery_capacity, ev.car_model.max_charging_power)
+    schedule = adjust_rl_schedule(schedule, target_kwh - ev.current_charge, ev.car_model.max_charging_power)
+
+    schedule = [0 if abs(x) < 1e-4 else x for x in schedule] #round very small numbers to 0
+
+    ev.schedule.num_hours = len(schedule)
+    ev.schedule.schedule_data = ", ".join(map(str, schedule))
+    ev.schedule.start = datetime.datetime.now()
+    ev.schedule.end = ev.schedule.start + datetime.timedelta(ev.schedule.num_hours)
+
+    db.commit()
+
     return [{"time": h, "price": p, "charging": b} for h, p, b in zip(hour_dk, prices, schedule)]
