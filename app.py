@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from rich import print
 from database.base import Base
-from database.db import engine, seed_db
+from database.db import engine, get_db, seed_db
 from routers import carmodels, evs, schedules, constraints, DQN
 import datetime
 import json
@@ -10,6 +10,7 @@ from modules.rl_short_term_scheduling import generate_schedule
 from modules.linear_optimization_controller import adjust_rl_schedule
 from modules.benchmark_prices import Benchmark
 import numpy as np
+import uvicorn
 
 from apis.EnergiData import EnergiData, RequestDetail
 
@@ -80,3 +81,7 @@ def schedule(num_hours: int, battery_level: float, battery_capacity: float, max_
     b = Benchmark(adjusted_schedule,prices,battery_capacity,max_chargin_rate)
     b.compare()
     return [{"time": h, "price": p, "charging": b} for h, p, b in zip(hour_dk, prices, adjusted_schedule)]
+
+
+if __name__ == "__main__":
+    uvicorn.run(app="app:app", reload=True)

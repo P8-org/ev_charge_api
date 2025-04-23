@@ -1,5 +1,6 @@
-from sqlalchemy import Column, DateTime, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, DateTime, Integer, String, Float, ForeignKey, Enum
 from sqlalchemy.orm import Session, Mapped, relationship
+import enum
 
 from database.base import Base
 
@@ -46,6 +47,8 @@ class UserEV(Base):
     user_set_name = Column(String, nullable=False)
     current_charge = Column(Float, nullable=False)
     current_charging_power = Column(Float, nullable=False)
+    max_charging_power = Column(Float, nullable=False)
+    state = Column(Enum("idle", "charging", "disconnected"), nullable=False, default="idle")
 
     car_model_id = Column(Integer, ForeignKey("car_models.id"), nullable=False)
     car_model: Mapped["CarModel"] = relationship("CarModel", back_populates="user_evs")

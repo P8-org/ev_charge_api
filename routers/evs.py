@@ -14,6 +14,24 @@ class EvCreate(BaseModel):
     name: str
     car_model_id: int
     battery_level: float
+    max_charging_power: float | None = None
+
+
+def simulate_charging(ev: UserEV):
+    now_hour = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
+    hour_idx = round((now_hour - ev.schedule.start).total_seconds() // 3600) if ev.schedule.start else None
+    if hour_idx is not None and hour_idx >= 0 and hour_idx < ev.schedule.num_hours:
+        schedule_data = list(map(float, ev.schedule.schedule_data.split(", ")))
+        ev.current_charging_power = schedule_data[hour_idx]
+        if ev.current_charging_power != 0:
+            ev.state = "charging"
+        else:
+            ev.state = "idle"
+        for i in range(hour_idx):
+            ev.current_charge += schedule_data[i]
+        elapsed_fraction = (datetime.datetime.now().minute * 60 + datetime.datetime.now().second) / 3600
+        ev.current_charge += schedule_data[hour_idx] * elapsed_fraction
+
 
 @router.post("/evs")
 async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
@@ -21,8 +39,11 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
     ev.user_set_name = ev_create.name
     ev.current_charge = ev_create.battery_level
     ev.current_charging_power = 0
+    ev.state = "disconnected"
 
     ev.car_model = db.query(CarModel).get(ev_create.car_model_id)
+
+    ev.max_charging_power = ev.car_model.max_charging_power if ev_create.max_charging_power is None else ev_create.max_charging_power
 
     constraint = Constraint()
     constraint.charged_by = datetime.datetime.now() + datetime.timedelta(days=1)
@@ -43,24 +64,30 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
 
 @router.get("/evs")
 async def get_evs(db: Session = Depends(get_db)):
-    evs = db.query(UserEV).options(
+    evs: list[UserEV] = db.query(UserEV).options(
         joinedload(UserEV.constraint),
         joinedload(UserEV.schedule),
         joinedload(UserEV.car_model)
     ).all()
+    [simulate_charging(e) for e in evs]
     return evs
 
 @router.get("/evs/{id}")
 async def get_ev_by_id(id: int, db: Session = Depends(get_db)):
-    ev = db.query(UserEV).options(
+    ev: UserEV = db.query(UserEV).options(
         joinedload(UserEV.constraint),
         joinedload(UserEV.schedule),
         joinedload(UserEV.car_model)
-    ).filter(UserEV.id == id).first()
+    ).get(id)
 
     if not ev:
         raise HTTPException(status_code=404, detail="EV not found")
+    
+    simulate_charging(ev)
+
     return ev
+
+
 
 @router.delete("/evs/{id}")
 async def delete_ev_by_id(id: int, db: Session = Depends(get_db)):
