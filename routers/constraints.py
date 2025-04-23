@@ -13,7 +13,7 @@ class ConstraintForm(BaseModel):
     target_percentage: float = 0.8
 
 
-@router.post("/constraints/{ev_id}")
+@router.post("/evs/{ev_id}/constraints")
 async def post_constraint(ev_id: int, form: ConstraintForm, db: Session = Depends(get_db)):
     ev: UserEV = db.query(UserEV).options(
         joinedload(UserEV.constraint),
@@ -33,3 +33,5 @@ async def post_constraint(ev_id: int, form: ConstraintForm, db: Session = Depend
     
     ev.constraint.charged_by = deadline
     ev.constraint.target_percentage = target_percentage
+
+    db.commit()
