@@ -56,6 +56,8 @@ class EnergiData:
             request_string += f'&offset={rd.offset}'
         if not rd.limit == 100:
             request_string += f'&limit={rd.limit}'
+        else:
+            request_string += '&limit=100'
 
         return request_string
 
@@ -114,20 +116,4 @@ class EnergiData:
 
         print(base_url+request_string)
         return self.__parse_request(r)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -3,6 +3,10 @@ sqlalchemy
 requests
 pytest
 pydantic
+numpy
+torch
+python-dateutil
+gymnasium
 maturin # for rust bindings
 cvxpy
 pandas
