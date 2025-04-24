@@ -4,8 +4,9 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from database.db import get_db
-from models.models import CarModel, Constraint, UserEV, Schedule
+from models.models import CarModel, Constraint, State, UserEV, Schedule
 from modules.rl_short_term_scheduling import generate_schedule
+import enum
 
 
 router = APIRouter()
@@ -39,7 +40,7 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
     ev.user_set_name = ev_create.name
     ev.current_charge = ev_create.battery_level
     ev.current_charging_power = 0
-    ev.state = "disconnected"
+    ev.state = State.DISCONNECTED
 
     ev.car_model = db.query(CarModel).get(ev_create.car_model_id)
 
@@ -54,6 +55,7 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
     schedule.start = datetime.datetime.now()
     schedule.schedule_data = ""
     schedule.num_hours = 0
+    schedule.start_charge = ev.current_charge
 
     ev.constraint = constraint
     ev.schedule = schedule

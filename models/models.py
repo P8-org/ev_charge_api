@@ -5,6 +5,11 @@ import enum
 from database.base import Base
 
 
+class State(enum.Enum):
+    IDLE = "idle"
+    CHARGING = "charging"
+    DISCONNECTED = "disconnected"
+
 class Constraint(Base):
     __tablename__ = "constraints"
     id = Column(Integer, primary_key=True, index=True)
@@ -20,6 +25,7 @@ class Schedule(Base):
     start = Column(DateTime, nullable=False)
     end = Column(DateTime, nullable=False)
     num_hours = Column(Integer, nullable=False)
+    start_charge = Column(Float, nullable=False)
     schedule_data = Column(String)  # csv format, example: "20, 20, 0, 0, 0, 10" 
     ev_id = Column(Integer, ForeignKey("user_evs.id"), nullable=False)
     ev: Mapped["UserEV"] = relationship(back_populates="schedule")
@@ -48,7 +54,7 @@ class UserEV(Base):
     current_charge = Column(Float, nullable=False)
     current_charging_power = Column(Float, nullable=False)
     max_charging_power = Column(Float, nullable=False)
-    state = Column(Enum("idle", "charging", "disconnected"), nullable=False, default="idle")
+    state = Column(Enum(State), nullable=False, default="idle")
 
     car_model_id = Column(Integer, ForeignKey("car_models.id"), nullable=False)
     car_model: Mapped["CarModel"] = relationship("CarModel", back_populates="user_evs")

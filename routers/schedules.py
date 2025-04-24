@@ -33,7 +33,6 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     rd = RequestDetail(startDate=formatted_time, dataset="Elspotprices", filter_json=json.dumps({"PriceArea": ["DK1"]}), sort_data="HourDK ASC")
     response = e.call_api(rd)
     while datetime.datetime.fromisoformat(response[0].HourDK) < datetime.datetime.now() - datetime.timedelta(hours=1):
-        print("pop")
         response.pop(0)
     
     hour_dk = [record.HourDK for record in response]
@@ -50,6 +49,7 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     ev.schedule.schedule_data = ", ".join(map(str, schedule))
     ev.schedule.start = (datetime.datetime.now()).replace(minute=0, second=0, microsecond=0)
     ev.schedule.end = ev.schedule.start + datetime.timedelta(hours=ev.schedule.num_hours)
+    ev.schedule.start_charge = ev.current_charge
 
     db.commit()
 
