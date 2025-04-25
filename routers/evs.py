@@ -19,10 +19,17 @@ class EvCreate(BaseModel):
 
 
 def simulate_charging(ev: UserEV):
+    try:
+        schedule_data = list(map(float, ev.schedule.schedule_data.split(", ")))
+    except: #if empty schedule_data
+        return
+    if ev.schedule.end < datetime.datetime.now():
+        for val in schedule_data:
+            ev.current_charge += val
+        return
     now_hour = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
     hour_idx = round((now_hour - ev.schedule.start).total_seconds() // 3600) if ev.schedule.start else None
     if hour_idx is not None and hour_idx >= 0 and hour_idx < ev.schedule.num_hours:
-        schedule_data = list(map(float, ev.schedule.schedule_data.split(", ")))
         ev.current_charging_power = schedule_data[hour_idx]
         if ev.current_charging_power != 0:
             ev.state = "charging"
