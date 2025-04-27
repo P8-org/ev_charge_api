@@ -42,17 +42,18 @@ async def get_car_models(query: str = None, db: Session = Depends(get_db)):
 @router.put("/carmodels/{id}")
 async def update_car_model(id: int, form: CarModelCreate, db: Session = Depends(get_db)):
  
-    old_model_id = db.query(CarModel).filter(CarModel.id == id).update(
+    model_id = db.query(CarModel).filter(CarModel.id == id).update(
         {
             "model_name": form.name,
             "model_year": form.year,
             "battery_capacity": form.battery_capacity,
             "max_charging_power": form.max_charging_power
-         })
+         }
+    )
     
-    if not old_model_id:
+    if not model_id:
         raise HTTPException(status_code=404, detail=f"Car Model with given id: '{id}' was not found")
     
     db.commit()
 
-    return form
+    return {"detail": f"Car Model with id: '{id}' updated successfully"}
