@@ -47,16 +47,17 @@ def power(): # should be replaced, but proof-of-concept
     last_week = datetime.date(year=2024,month=4,day=17)
     # last_week = "StartOfYear-P2Y"
     # now = "now"
-    lim = 24
+    lim = 0
     option = "HourUTC,PriceArea"
     fil = json.dumps({"PriceArea": ["DK1"]})
-    sort = "HourUTC"
+    sort = "HourUTC ASC"
     offset = 0
+    formatted_time = (datetime.datetime.now() - datetime.timedelta(minutes=59)).strftime("%Y-%m-%dT%H:%M")
 
     # rd = RequestDetail(startDate=last_week, endDate=now, dataset="Elspotprices", optional=option, limit=lim, filter_json=fil, sort_data=sort, offset=offset)
     # rd = RequestDetail(startDate=last_week, endDate=now,dataset="Elspotprices",limit=lim, filter_json=fil)
     # rd = RequestDetail(startDate=last_week, endDate=now,dataset="Elspotprices", optional=option, filter_json=fil)
-    rd = RequestDetail(startDate=last_week, endDate=now,dataset="Elspotprices", filter_json=fil, limit=lim)
+    rd = RequestDetail(startDate=formatted_time, dataset="Elspotprices", filter_json=fil, sort_data=sort)
     # rd = RequestDetail(startDate=last_week, dataset="Elspotprices", filter_json=fil, limit=lim)
     # e.call_api(rd)
     # return e.data
@@ -84,4 +85,4 @@ def schedule(num_hours: int, battery_level: float, battery_capacity: float, max_
 
 
 if __name__ == "__main__":
-    uvicorn.run(app="app:app", reload=True)
+    uvicorn.run(app="app:app", reload=True, host="0.0.0.0")
