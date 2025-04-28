@@ -10,8 +10,6 @@ from modules.rl_short_term_scheduling import generate_schedule
 from database.base import Base
 from database.db import get_db
 from models.models import UserEV
-import pytz
-
 
 router = APIRouter()
 
@@ -19,20 +17,40 @@ router = APIRouter()
 async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     ev: UserEV = db.query(UserEV).options(
         joinedload(UserEV.constraint),
-        joinedload(UserEV.schedule)
+        joinedload(UserEV.schedule),
+        joinedload(UserEV.car_model)
     ).get(ev_id)
+
+    if ev is None:
+        raise HTTPException(status_code=404, detail=f"EV with id {ev_id} not found")
 
     duration: datetime.timedelta = ev.constraint.charged_by - datetime.datetime.now()
     num_hours = math.ceil(duration.total_seconds() / 60 / 60)
     if num_hours <= 0: raise HTTPException(status_code=400, detail="Charging duration is negative")
     target_kwh = ev.constraint.target_percentage * ev.car_model.battery_capacity
     e = EnergiData()
-    rd = RequestDetail(startDate="now", dataset="Elspotprices", filter_json=json.dumps({"PriceArea": ["DK1"]}), sort_data="HourDK ASC")
+    formatted_time = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M")
+    rd = RequestDetail(startDate=formatted_time, dataset="Elspotprices", filter_json=json.dumps({"PriceArea": ["DK1"]}), sort_data="HourDK ASC")
     response = e.call_api(rd)
-    
+    while datetime.datetime.fromisoformat(response[0].HourDK) < datetime.datetime.now():
+        response.pop(0)
+
     hour_dk = [record.HourDK for record in response]
     prices = [record.SpotPriceDKK / 1000 for record in response]
 
-    schedule = generate_schedule(num_hours, ev.current_charge, target_kwh, ev.car_model.max_charging_power, prices, False)
-    schedule = adjust_rl_schedule(schedule, ev.car_model.battery_capacity, ev.car_model.max_charging_power)
+    max_power = min(ev.max_charging_power, ev.car_model.max_charging_power)
+
+    schedule = generate_schedule(num_hours, ev.current_charge, target_kwh, max_power, prices, False)
+    schedule = adjust_rl_schedule(schedule, target_kwh - ev.current_charge, max_power)
+
+    schedule = [0 if abs(x) < 1e-4 else x for x in schedule] #round very small numbers to 0
+
+    ev.schedule.num_hours = len(schedule)
+    ev.schedule.schedule_data = ", ".join(map(str, schedule))
+    ev.schedule.start = (datetime.datetime.now() + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    ev.schedule.end = ev.schedule.start + datetime.timedelta(hours=ev.schedule.num_hours)
+    ev.schedule.start_charge = ev.current_charge
+
+    db.commit()
+
     return [{"time": h, "price": p, "charging": b} for h, p, b in zip(hour_dk, prices, schedule)]
