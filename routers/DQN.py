@@ -38,7 +38,7 @@ def dqn_start_train(branch_name="main"):
         print(response.text)
 
 
-@router.get("/dqn_train_status")
+@router.get("/train_status")
 def dqn_train_status():
     r = requests.get("https://api.github.com/repos/P8-org/ev_charge_api/actions/workflows/ailab.yml/runs")
     status = r.json()["workflow_runs"][0]["status"]
@@ -47,7 +47,7 @@ def dqn_train_status():
 
 
 
-@router.get("/download")
+@router.get("/download_dqn")
 def dqn_download_artifact():
 
     OWNER = "P8-org"
