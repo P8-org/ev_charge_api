@@ -1,9 +1,5 @@
 name: AI-LAB train model
 on:
-  # push:
-  #   paths:
-  #     - RL/DQN/**
-  #     - .github/workflows/ailab.yml
   workflow_dispatch:
     inputs:
       from:
@@ -13,6 +9,10 @@ on:
       info:
         description: "Start Model Training"
         required: false
+      branch:
+        description: "Branch to run workflow on"
+        required: true
+        default: "implement_charging_curves"   # change to current branch
 
 jobs:
   train:
@@ -21,9 +21,11 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@v3
-      # - name: Refresh Nodes
-      #   run: |
-      #     refresh-nodes
+        with:
+          ref: ${{ github.event.inputs.branch }}
+      - name: Refresh Nodes
+        run: |
+          refresh-nodes
       - name: Install virtualenv
         run: srun singularity exec /ceph/container/python/python_3.10.sif pip install --user virtualenv
       - name: Make virtualenv
