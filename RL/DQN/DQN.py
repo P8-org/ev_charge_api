@@ -276,7 +276,7 @@ def run():
     ]
     charge_speed = 22
     num_chargers = 4
-    num_episodes = 500
+    num_episodes = 2000
     rd = RequestDetail(
         startDate="StartOfYear-P1M",
         # startDate="StartOfDay-P3D",
@@ -359,7 +359,7 @@ def run():
     print("Optimal Charging Schedule (per hour): ")
     for hour, car_ids, charge_time in env.schedule:
         if car_ids:
-            print(env.cars[car_ids[0]])
+            # print(env.cars[car_ids[0]])
             car_list = ", ".join([f"Car {cid}" for cid in car_ids])
             hour_index = min(hour, len(times_48) - 1)  # prevent out of bounds
             start_time = times_48[hour_index]
@@ -368,5 +368,6 @@ def run():
             print(f"At {start_time_str} (Price: {prices_48[hour_index]:.2f}) -> Charged: {car_list} (Hour {hour}) Charge Time: {charge_time}")
     
     print(env.schedule)
+    # print(prices_48)
     # print(charging_curves)
 
