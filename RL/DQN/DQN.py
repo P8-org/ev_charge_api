@@ -16,8 +16,6 @@ from apis.EnergiData import EnergiData, RequestDetail
 import gymnasium as gym
 from gymnasium import spaces
 
-with open("charging_curve.json") as f:
-    charging_curves = json.load(f)
 
 class ElectricChargeEnv(gym.Env):
     """
