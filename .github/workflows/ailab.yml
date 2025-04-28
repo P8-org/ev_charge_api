@@ -9,10 +9,6 @@ on:
       info:
         description: "Start Model Training"
         required: false
-      branch:
-        description: "Branch to run workflow on"
-        required: true
-        default: "implement_charging_curves"   # change to current branch
 
 jobs:
   train:
@@ -21,8 +17,6 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.branch }}
       - name: Refresh Nodes
         run: |
           refresh-nodes
