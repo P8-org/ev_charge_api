@@ -271,7 +271,7 @@ def run():
         {'id': 1, 'charged': False, 'charge': 40, 'charge_percentage': (40/60)*100, 'max_charge': 60, 'using_charger_id': -1},
         {'id': 2, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
     ]
-    charge_speed = 12
+    charge_speed = 22
     num_chargers = 1
     num_episodes = 500
     rd = RequestDetail(
