@@ -55,6 +55,7 @@ class ElectricChargeEnv(gym.Env):
         self.chargers = [{'id': i, 'in_use': False, 'car_id': None} for i in range(self.num_chargers)]
 
         self.done = False
+        # self.schedule = []  # (time, list of car ids, charge time)
         self.schedule = []  # (time, list of car ids, charge time)
 
         return self._get_state(), {}
@@ -109,13 +110,26 @@ class ElectricChargeEnv(gym.Env):
                 self.charging_car_ids.remove(car_id)
 
         # Record finished cars in schedule
+        # for car_id in cars_fully_charged:
+        #     car = self.cars[car_id]
+        #     # print(car)
+        #     start = car.get('started_at')
+        #     end = self.t + 1
+        #     duration = end - start
+        #     self.schedule.append((start, [car_id], duration))
+
         for car_id in cars_fully_charged:
             car = self.cars[car_id]
             # print(car)
             start = car.get('started_at')
             end = self.t + 1
             duration = end - start
-            self.schedule.append((start, [car_id], duration))
+            charge_kw = [0]*24
+            for i in range(start,end):
+                charge_kw[i] = self.charge_speed
+            
+            self.schedule.append({"car_id": car_id, "start_time":start, "charge_kw": charge_kw, "duration": duration})
+            # self.schedule.append({"car_id": car['id'], "charge_kw": charge_kw})
 
         # Calculate reward
         cost = self.prices[self.t] * len(self.charging_car_ids)
@@ -279,14 +293,14 @@ def run():
     num_episodes = 2000
     rd = RequestDetail(
         startDate="StartOfYear-P1M",
-        # startDate="StartOfDay-P3D",
+        # startDate="StartOfDay",
         # endDate="StartOfDay-P1M",
-        endDate="StartOfDay-P5D",
+        endDate="StartOfDay-P6D",
         dataset="Elspotprices",
         # optional="HourDK,SpotPriceDKK",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
         limit=24*5, # Default=0, to limit set to a minimum of 72 hours
-        # offset=24*0
+        offset=13
     )
     data = EnergiData().call_api(rd)
     print(f"Days of data: {len(data)/24}")
@@ -356,18 +370,16 @@ def run():
         state, _, done, _, _ = env.step(action)
 
     # Print the schedule
-    print("Optimal Charging Schedule (per hour): ")
-    for hour, car_ids, charge_time in env.schedule:
-        if car_ids:
-            # print(env.cars[car_ids[0]])
-            car_list = ", ".join([f"Car {cid}" for cid in car_ids])
-            hour_index = min(hour, len(times_48) - 1)  # prevent out of bounds
-            start_time = times_48[hour_index]
-            start_time_dt = start_time.astype('M8[s]').tolist()
-            start_time_str = start_time_dt.strftime("%Y-%m-%d %H:%M")
-            print(f"At {start_time_str} (Price: {prices_48[hour_index]:.2f}) -> Charged: {car_list} (Hour {hour}) Charge Time: {charge_time}")
+    # print("Optimal Charging Schedule (per hour): ")
+    for car in env.schedule:
+        # print(env.cars[car_ids[0]])
+        hour_index = min(car['start_time'], len(times_48) - 1)  # prevent out of bounds
+        start_time = times_48[hour_index]
+        start_time_dt = start_time.astype('M8[s]').tolist()
+        start_time_str = start_time_dt.strftime("%Y-%m-%d %H:%M")
+        print(f"At {start_time_str} (Price: {prices_48[hour_index]:.2f}) -> Charged: {car['car_id']} (Hour {car['start_time']}) Charge Time: {car['duration']}")
     
-    print(env.schedule)
+    # print(env.schedule)
     # print(prices_48)
     # print(charging_curves)
 
