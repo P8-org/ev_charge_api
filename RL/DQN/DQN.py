@@ -267,7 +267,7 @@ def train_agent(env, agent, num_episodes=500, print_iter=False):
 # ------------------------------
 # Usage
 # ------------------------------
-def run():
+def run_dqn():
     """Runs the training and testing process for the electric charging environment."""
     cars = [
         {'id': 0, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 80, 'using_charger_id': -1},
