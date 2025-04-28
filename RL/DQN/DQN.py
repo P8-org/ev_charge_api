@@ -76,14 +76,14 @@ class ElectricChargeEnv(gym.Env):
         valid_action = min(action, len(available_chargers), len(self.uncharged_car_ids))
 
         # Assign new cars to free chargers
-        for i in range(valid_action):
-            charger = available_chargers[i]
-            car_id = self.uncharged_car_ids.pop(0)
+        for charger in available_chargers[:valid_action]:
+            if not self.uncharged_car_ids:
+                break  # No more cars to charge
 
+            car_id = self.uncharged_car_ids.pop(0)
             charger['in_use'] = True
             charger['car_id'] = car_id
             car = self.cars[car_id]
-            # car['charge_start_time'] = self.t
             car['using_charger_id'] = charger['id']
             car['started_at'] = self.t  # record when car starts charging
             car['charge_time'] = self.t # car charging time charging
@@ -270,9 +270,9 @@ def run():
         {'id': 0, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 80, 'using_charger_id': -1},
         {'id': 1, 'charged': False, 'charge': 40, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
         {'id': 2, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
-        {'id': 4, 'charged': False, 'charge': 20, 'charge_percentage': 0, 'max_charge': 80, 'using_charger_id': -1},
-        {'id': 5, 'charged': False, 'charge': 50, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
-        {'id': 6, 'charged': False, 'charge': 20, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
+        {'id': 3, 'charged': False, 'charge': 20, 'charge_percentage': 0, 'max_charge': 80, 'using_charger_id': -1},
+        {'id': 4, 'charged': False, 'charge': 50, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
+        {'id': 5, 'charged': False, 'charge': 20, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
     ]
     charge_speed = 22
     num_chargers = 4
