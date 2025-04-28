@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from dateutil import parser
-from time import strftime
+import time
 import numpy as np
 import torch
 import torch.nn as nn
@@ -16,26 +16,27 @@ from apis.EnergiData import EnergiData, RequestDetail
 import gymnasium as gym
 from gymnasium import spaces
 
+with open("charging_curve.json") as f:
+    charging_curves = json.load(f)
+
 class ElectricChargeEnv(gym.Env):
     """
     Custom environment for optimizing electric car charging schedules.
     """
     metadata = {"render_modes": ["human"], "render_fps": 1}
 
-    def __init__(self, prices, times, num_cars, num_chargers):
-        super(ElectricChargeEnv, self).__init__()
+    def __init__(self, prices, times, cars, num_chargers, charge_speed):
+        super().__init__()
 
         self.prices = np.array(prices, dtype=np.float32)
         self.times = np.array(times)
-        self.num_cars = num_cars
+        self.base_cars = cars  # initial cars
         self.num_chargers = num_chargers
+        self.charge_speed = charge_speed  # kW
         self.total_time = len(prices)
         self.max_price = np.max(self.prices)
 
-        # Define action and observation spaces FIRST
-        self.action_space = spaces.Discrete(num_chargers + 1)  # 0 to num_chargers cars
-
-        # Includes: norm_time, norm_remaining, hour_of_day, day_of_week, and normalized price vector
+        self.action_space = spaces.Discrete(num_chargers + 1)  # 0 to num_chargers
         self.observation_space = spaces.Box(
             low=0, high=1,
             shape=(4 + self.total_time,),
@@ -46,21 +47,23 @@ class ElectricChargeEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        
+
         self.t = 0
-        self.cars = [{'id': i, 'charged': False, 'charge_time': None} for i in range(self.num_cars)]
-        self.uncharged_car_ids = list(range(self.num_cars))
+        self.cars = [car.copy() for car in self.base_cars]  # Deep copy cars
+        self.uncharged_car_ids = [car['id'] for car in self.cars]
+        self.charging_car_ids = []
+        self.chargers = [{'id': i, 'in_use': False, 'car_id': None} for i in range(self.num_chargers)]
+
         self.done = False
-        self.schedule = []  # (time, list of car ids charged at that time)
-        
+        self.schedule = []  # (time, list of car ids, charge time)
+
         return self._get_state(), {}
 
     def _get_state(self):
         norm_time = self.t / (self.total_time - 1)
-        norm_remaining = len(self.uncharged_car_ids) / self.num_cars
+        norm_remaining = len(self.uncharged_car_ids) / len(self.cars)
         norm_prices = self.prices / (self.max_price + 1e-6)
 
-        # Time features
         current_time = self.times[self.t].astype('datetime64[s]').astype(object)
         hour_of_day = current_time.hour / 23.0
         day_of_week = current_time.weekday() / 6.0
@@ -68,39 +71,72 @@ class ElectricChargeEnv(gym.Env):
         return np.concatenate(([norm_time, norm_remaining, hour_of_day, day_of_week], norm_prices)).astype(np.float32)
 
     def step(self, action):
-        valid_action = min(action, len(self.uncharged_car_ids), self.num_chargers)
-        cost = self.prices[self.t] * valid_action
+        # Limit action to number of free chargers and uncharged cars
+        available_chargers = [ch for ch in self.chargers if not ch['in_use']]
+        valid_action = min(action, len(available_chargers), len(self.uncharged_car_ids))
+
+        # Assign new cars to free chargers
+        for i in range(valid_action):
+            charger = available_chargers[i]
+            car_id = self.uncharged_car_ids.pop(0)
+
+            charger['in_use'] = True
+            charger['car_id'] = car_id
+            car = self.cars[car_id]
+            # car['charge_start_time'] = self.t
+            car['using_charger_id'] = charger['id']
+            car['started_at'] = self.t  # record when car starts charging
+            car['charge_time'] = self.t # car charging time charging
+            self.charging_car_ids.append(car_id)
+
+        # Update charging cars
+        cars_fully_charged = []
+        for car_id in self.charging_car_ids[:]:  # Copy, might modify list
+            car = self.cars[car_id]
+            car['charge'] += self.charge_speed
+            car['charge_time'] = self.t + 1
+            car['charge_percentage'] = (car['charge'] / car['max_charge']) * 100
+
+            if car['charge_percentage'] >= 100:
+                car['charged'] = True
+                car['charge'] = car['max_charge']
+                car['charge_percentage'] = 100
+
+                cars_fully_charged.append(car_id)
+                charger_idx = car['using_charger_id']
+                self.chargers[charger_idx]['in_use'] = False
+                self.chargers[charger_idx]['car_id'] = None
+                self.charging_car_ids.remove(car_id)
+
+        # Record finished cars in schedule
+        for car_id in cars_fully_charged:
+            car = self.cars[car_id]
+            # print(car)
+            start = car.get('started_at')
+            end = self.t + 1
+            duration = end - start
+            self.schedule.append((start, [car_id], duration))
+
+        # Calculate reward
+        cost = self.prices[self.t] * len(self.charging_car_ids)
         reward = -cost
 
-        cars_charged_now = []
-        for _ in range(valid_action):
-            car_id = self.uncharged_car_ids.pop(0)
-            self.cars[car_id]['charged'] = True
-            self.cars[car_id]['charge_time'] = self.t
-            cars_charged_now.append(car_id)
-
-        self.schedule.append((self.t, cars_charged_now))
-
-        # CHECK before updating self.t
-        done = False
+        # Check done
         if self.t + 1 >= self.total_time:
-            done = True
+            self.done = True
             if self.uncharged_car_ids:
-                reward -= 10 * len(self.uncharged_car_ids)
-        elif not self.uncharged_car_ids:
-            done = True
+                reward -= 10 * len(self.uncharged_car_ids)  # Penalty for uncharged cars
+        elif not self.uncharged_car_ids and not self.charging_car_ids:
+            self.done = True
 
-        self.t = min(self.t + 1, self.total_time - 1)  # Prevent t from going out of bounds
-        self.done = done
+        self.t = min(self.t + 1, self.total_time - 1)
 
         return self._get_state(), reward, self.done, False, {}
 
     def render(self, mode="human"):
-        """Optional render method to visualize the schedule."""
         print(f"Time Step {self.t}: Schedule -> {self.schedule}")
 
     def close(self):
-        """Clean up if necessary."""
         pass
 
 # ------------------------------
@@ -230,6 +266,14 @@ def train_agent(env, agent, num_episodes=500, print_iter=False):
 # ------------------------------
 def run():
     """Runs the training and testing process for the electric charging environment."""
+    cars = [
+        {'id': 0, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 80, 'using_charger_id': -1},
+        {'id': 1, 'charged': False, 'charge': 40, 'charge_percentage': (40/60)*100, 'max_charge': 60, 'using_charger_id': -1},
+        {'id': 2, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
+    ]
+    charge_speed = 12
+    num_chargers = 1
+    num_episodes = 500
     rd = RequestDetail(
         startDate="StartOfYear-P1M",
         # startDate="StartOfDay-P3D",
@@ -238,7 +282,7 @@ def run():
         dataset="Elspotprices",
         # optional="HourDK,SpotPriceDKK",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
-        limit=24*0, # Default=0, to limit set to a minimum of 72 hours
+        limit=24*5, # Default=0, to limit set to a minimum of 72 hours
         # offset=24*0
     )
     data = EnergiData().call_api(rd)
@@ -263,8 +307,6 @@ def run():
     test_periods = periods[split_idx:]
     # print(test_periods)
 
-    num_cars = 3
-    num_chargers = 1
 
     agent = None
 
@@ -272,19 +314,19 @@ def run():
         print(f"Number of training periods: {len(train_periods)}")
         for i, (prices_48, times_48) in enumerate(train_periods):
             print(f"\n[Training] Period {i+1}/{len(train_periods)} starting at {times_48[0]}")
-            env = ElectricChargeEnv(prices_48, times_48, num_cars, num_chargers)
+            env = ElectricChargeEnv(prices_48, times_48, cars, num_chargers, charge_speed)
             state_dim = env.observation_space.shape[0]
             action_dim = env.action_space.n
 
             if agent is None:
                 agent = DQNAgent(state_dim, action_dim, lr=1e-4)
 
-            print(agent.action_dim)
-            train_agent(env, agent, num_episodes=300)
+            # print(agent.action_dim)
+            train_agent(env, agent, num_episodes=num_episodes)
 
-        if (isinstance(agent, DQNAgent)):
-        # Save the trained model
-            agent.save("dqn_model.pth")
+        # if (isinstance(agent, DQNAgent)):
+        # # Save the trained model
+        #     agent.save("dqn_model.pth")
 
     # ------------------------------
     # Testing the Trained Agent
@@ -292,16 +334,15 @@ def run():
     prices_48, times_48 = test_periods[0]
 
     if agent is None:
-        env = ElectricChargeEnv(prices_48, times_48, num_cars, num_chargers)
+        env = ElectricChargeEnv(prices_48, times_48, cars, num_chargers, charge_speed)
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.n
         agent = DQNAgent(state_dim, action_dim)
 
-    agent.load("dqn_model.pth")
+    # agent.load("dqn_model.pth")
 
     print("\n[bold underline]Testing Trained Agent[/bold underline]")
     print(f"\n[Testing] starting at {times_48[0]}")
-    env = ElectricChargeEnv(prices_48, times_48, num_cars, num_chargers)
     state, _ = env.reset()
     done = False
     while not done:
@@ -313,11 +354,16 @@ def run():
 
     # Print the schedule
     print("Optimal Charging Schedule (per hour): ")
-    for hour, car_ids in env.schedule:
+    for hour, car_ids, charge_time in env.schedule:
         if car_ids:
+            print(env.cars[car_ids[0]])
             car_list = ", ".join([f"Car {cid}" for cid in car_ids])
             hour_index = min(hour, len(times_48) - 1)  # prevent out of bounds
-            charge_time = times_48[hour_index]
-            charge_time_dt = charge_time.astype('M8[s]').tolist()
-            charge_time_str = charge_time_dt.strftime("%Y-%m-%d %H:%M")
-            print(f"At {charge_time_str} (Price: {prices_48[hour_index]:.2f}) -> Charged: {car_list} (Hour {hour})")
+            start_time = times_48[hour_index]
+            start_time_dt = start_time.astype('M8[s]').tolist()
+            start_time_str = start_time_dt.strftime("%Y-%m-%d %H:%M")
+            print(f"At {start_time_str} (Price: {prices_48[hour_index]:.2f}) -> Charged: {car_list} (Hour {hour}) Charge Time: {charge_time}")
+    
+    print(env.schedule)
+    # print(charging_curves)
+

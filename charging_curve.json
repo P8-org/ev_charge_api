@@ -1,0 +1,507 @@
+[
+    {
+        "state_of_charge_percentage": 0,
+        "charge_speed_kW": 32,
+        "energy_charged_kWh": 0.0
+    },
+    {
+        "state_of_charge_percentage": 1,
+        "charge_speed_kW": 65,
+        "energy_charged_kWh": 0.7
+    },
+    {
+        "state_of_charge_percentage": 2,
+        "charge_speed_kW": 98,
+        "energy_charged_kWh": 1.3
+    },
+    {
+        "state_of_charge_percentage": 3,
+        "charge_speed_kW": 130,
+        "energy_charged_kWh": 2.0
+    },
+    {
+        "state_of_charge_percentage": 4,
+        "charge_speed_kW": 162,
+        "energy_charged_kWh": 2.7
+    },
+    {
+        "state_of_charge_percentage": 5,
+        "charge_speed_kW": 195,
+        "energy_charged_kWh": 3.4
+    },
+    {
+        "state_of_charge_percentage": 6,
+        "charge_speed_kW": 197,
+        "energy_charged_kWh": 4.0
+    },
+    {
+        "state_of_charge_percentage": 7,
+        "charge_speed_kW": 197,
+        "energy_charged_kWh": 4.7
+    },
+    {
+        "state_of_charge_percentage": 8,
+        "charge_speed_kW": 198,
+        "energy_charged_kWh": 5.4
+    },
+    {
+        "state_of_charge_percentage": 9,
+        "charge_speed_kW": 199,
+        "energy_charged_kWh": 6.0
+    },
+    {
+        "state_of_charge_percentage": 10,
+        "charge_speed_kW": 200,
+        "energy_charged_kWh": 6.7
+    },
+    {
+        "state_of_charge_percentage": 11,
+        "charge_speed_kW": 201,
+        "energy_charged_kWh": 7.4
+    },
+    {
+        "state_of_charge_percentage": 12,
+        "charge_speed_kW": 201,
+        "energy_charged_kWh": 8.1
+    },
+    {
+        "state_of_charge_percentage": 13,
+        "charge_speed_kW": 202,
+        "energy_charged_kWh": 8.7
+    },
+    {
+        "state_of_charge_percentage": 14,
+        "charge_speed_kW": 203,
+        "energy_charged_kWh": 9.4
+    },
+    {
+        "state_of_charge_percentage": 15,
+        "charge_speed_kW": 205,
+        "energy_charged_kWh": 10.1
+    },
+    {
+        "state_of_charge_percentage": 16,
+        "charge_speed_kW": 205,
+        "energy_charged_kWh": 10.7
+    },
+    {
+        "state_of_charge_percentage": 17,
+        "charge_speed_kW": 206,
+        "energy_charged_kWh": 11.4
+    },
+    {
+        "state_of_charge_percentage": 18,
+        "charge_speed_kW": 208,
+        "energy_charged_kWh": 12.1
+    },
+    {
+        "state_of_charge_percentage": 19,
+        "charge_speed_kW": 197,
+        "energy_charged_kWh": 12.7
+    },
+    {
+        "state_of_charge_percentage": 20,
+        "charge_speed_kW": 197,
+        "energy_charged_kWh": 13.4
+    },
+    {
+        "state_of_charge_percentage": 21,
+        "charge_speed_kW": 181,
+        "energy_charged_kWh": 14.1
+    },
+    {
+        "state_of_charge_percentage": 22,
+        "charge_speed_kW": 181,
+        "energy_charged_kWh": 14.8
+    },
+    {
+        "state_of_charge_percentage": 23,
+        "charge_speed_kW": 182,
+        "energy_charged_kWh": 15.4
+    },
+    {
+        "state_of_charge_percentage": 24,
+        "charge_speed_kW": 182,
+        "energy_charged_kWh": 16.1
+    },
+    {
+        "state_of_charge_percentage": 25,
+        "charge_speed_kW": 183,
+        "energy_charged_kWh": 16.8
+    },
+    {
+        "state_of_charge_percentage": 26,
+        "charge_speed_kW": 174,
+        "energy_charged_kWh": 17.4
+    },
+    {
+        "state_of_charge_percentage": 27,
+        "charge_speed_kW": 175,
+        "energy_charged_kWh": 18.1
+    },
+    {
+        "state_of_charge_percentage": 28,
+        "charge_speed_kW": 175,
+        "energy_charged_kWh": 18.8
+    },
+    {
+        "state_of_charge_percentage": 29,
+        "charge_speed_kW": 168,
+        "energy_charged_kWh": 19.5
+    },
+    {
+        "state_of_charge_percentage": 30,
+        "charge_speed_kW": 168,
+        "energy_charged_kWh": 20.1
+    },
+    {
+        "state_of_charge_percentage": 31,
+        "charge_speed_kW": 168,
+        "energy_charged_kWh": 20.8
+    },
+    {
+        "state_of_charge_percentage": 32,
+        "charge_speed_kW": 158,
+        "energy_charged_kWh": 21.5
+    },
+    {
+        "state_of_charge_percentage": 33,
+        "charge_speed_kW": 162,
+        "energy_charged_kWh": 22.1
+    },
+    {
+        "state_of_charge_percentage": 34,
+        "charge_speed_kW": 162,
+        "energy_charged_kWh": 22.8
+    },
+    {
+        "state_of_charge_percentage": 35,
+        "charge_speed_kW": 163,
+        "energy_charged_kWh": 23.5
+    },
+    {
+        "state_of_charge_percentage": 36,
+        "charge_speed_kW": 158,
+        "energy_charged_kWh": 24.2
+    },
+    {
+        "state_of_charge_percentage": 37,
+        "charge_speed_kW": 158,
+        "energy_charged_kWh": 24.8
+    },
+    {
+        "state_of_charge_percentage": 38,
+        "charge_speed_kW": 158,
+        "energy_charged_kWh": 25.5
+    },
+    {
+        "state_of_charge_percentage": 39,
+        "charge_speed_kW": 144,
+        "energy_charged_kWh": 26.2
+    },
+    {
+        "state_of_charge_percentage": 40,
+        "charge_speed_kW": 144,
+        "energy_charged_kWh": 26.8
+    },
+    {
+        "state_of_charge_percentage": 41,
+        "charge_speed_kW": 144,
+        "energy_charged_kWh": 27.5
+    },
+    {
+        "state_of_charge_percentage": 42,
+        "charge_speed_kW": 144,
+        "energy_charged_kWh": 28.2
+    },
+    {
+        "state_of_charge_percentage": 43,
+        "charge_speed_kW": 144,
+        "energy_charged_kWh": 28.9
+    },
+    {
+        "state_of_charge_percentage": 44,
+        "charge_speed_kW": 144,
+        "energy_charged_kWh": 29.5
+    },
+    {
+        "state_of_charge_percentage": 45,
+        "charge_speed_kW": 125,
+        "energy_charged_kWh": 30.2
+    },
+    {
+        "state_of_charge_percentage": 46,
+        "charge_speed_kW": 125,
+        "energy_charged_kWh": 30.9
+    },
+    {
+        "state_of_charge_percentage": 47,
+        "charge_speed_kW": 126,
+        "energy_charged_kWh": 31.5
+    },
+    {
+        "state_of_charge_percentage": 48,
+        "charge_speed_kW": 126,
+        "energy_charged_kWh": 32.2
+    },
+    {
+        "state_of_charge_percentage": 49,
+        "charge_speed_kW": 126,
+        "energy_charged_kWh": 32.9
+    },
+    {
+        "state_of_charge_percentage": 50,
+        "charge_speed_kW": 126,
+        "energy_charged_kWh": 33.6
+    },
+    {
+        "state_of_charge_percentage": 51,
+        "charge_speed_kW": 115,
+        "energy_charged_kWh": 34.2
+    },
+    {
+        "state_of_charge_percentage": 52,
+        "charge_speed_kW": 115,
+        "energy_charged_kWh": 34.9
+    },
+    {
+        "state_of_charge_percentage": 53,
+        "charge_speed_kW": 115,
+        "energy_charged_kWh": 35.6
+    },
+    {
+        "state_of_charge_percentage": 54,
+        "charge_speed_kW": 116,
+        "energy_charged_kWh": 36.2
+    },
+    {
+        "state_of_charge_percentage": 55,
+        "charge_speed_kW": 105,
+        "energy_charged_kWh": 36.9
+    },
+    {
+        "state_of_charge_percentage": 56,
+        "charge_speed_kW": 105,
+        "energy_charged_kWh": 37.6
+    },
+    {
+        "state_of_charge_percentage": 57,
+        "charge_speed_kW": 105,
+        "energy_charged_kWh": 38.2
+    },
+    {
+        "state_of_charge_percentage": 58,
+        "charge_speed_kW": 100,
+        "energy_charged_kWh": 38.9
+    },
+    {
+        "state_of_charge_percentage": 59,
+        "charge_speed_kW": 102,
+        "energy_charged_kWh": 39.6
+    },
+    {
+        "state_of_charge_percentage": 60,
+        "charge_speed_kW": 102,
+        "energy_charged_kWh": 40.3
+    },
+    {
+        "state_of_charge_percentage": 61,
+        "charge_speed_kW": 96,
+        "energy_charged_kWh": 40.9
+    },
+    {
+        "state_of_charge_percentage": 62,
+        "charge_speed_kW": 97,
+        "energy_charged_kWh": 41.6
+    },
+    {
+        "state_of_charge_percentage": 63,
+        "charge_speed_kW": 94,
+        "energy_charged_kWh": 42.3
+    },
+    {
+        "state_of_charge_percentage": 64,
+        "charge_speed_kW": 93,
+        "energy_charged_kWh": 42.9
+    },
+    {
+        "state_of_charge_percentage": 65,
+        "charge_speed_kW": 91,
+        "energy_charged_kWh": 43.6
+    },
+    {
+        "state_of_charge_percentage": 66,
+        "charge_speed_kW": 92,
+        "energy_charged_kWh": 44.3
+    },
+    {
+        "state_of_charge_percentage": 67,
+        "charge_speed_kW": 89,
+        "energy_charged_kWh": 45.0
+    },
+    {
+        "state_of_charge_percentage": 68,
+        "charge_speed_kW": 90,
+        "energy_charged_kWh": 45.6
+    },
+    {
+        "state_of_charge_percentage": 69,
+        "charge_speed_kW": 88,
+        "energy_charged_kWh": 46.3
+    },
+    {
+        "state_of_charge_percentage": 70,
+        "charge_speed_kW": 87,
+        "energy_charged_kWh": 47.0
+    },
+    {
+        "state_of_charge_percentage": 71,
+        "charge_speed_kW": 87,
+        "energy_charged_kWh": 47.6
+    },
+    {
+        "state_of_charge_percentage": 72,
+        "charge_speed_kW": 84,
+        "energy_charged_kWh": 48.3
+    },
+    {
+        "state_of_charge_percentage": 73,
+        "charge_speed_kW": 84,
+        "energy_charged_kWh": 49.0
+    },
+    {
+        "state_of_charge_percentage": 74,
+        "charge_speed_kW": 84,
+        "energy_charged_kWh": 49.7
+    },
+    {
+        "state_of_charge_percentage": 75,
+        "charge_speed_kW": 79,
+        "energy_charged_kWh": 50.3
+    },
+    {
+        "state_of_charge_percentage": 76,
+        "charge_speed_kW": 77,
+        "energy_charged_kWh": 51.0
+    },
+    {
+        "state_of_charge_percentage": 77,
+        "charge_speed_kW": 70,
+        "energy_charged_kWh": 51.7
+    },
+    {
+        "state_of_charge_percentage": 78,
+        "charge_speed_kW": 70,
+        "energy_charged_kWh": 52.3
+    },
+    {
+        "state_of_charge_percentage": 79,
+        "charge_speed_kW": 71,
+        "energy_charged_kWh": 53.0
+    },
+    {
+        "state_of_charge_percentage": 80,
+        "charge_speed_kW": 67,
+        "energy_charged_kWh": 53.7
+    },
+    {
+        "state_of_charge_percentage": 81,
+        "charge_speed_kW": 59,
+        "energy_charged_kWh": 54.4
+    },
+    {
+        "state_of_charge_percentage": 82,
+        "charge_speed_kW": 59,
+        "energy_charged_kWh": 55.0
+    },
+    {
+        "state_of_charge_percentage": 83,
+        "charge_speed_kW": 59,
+        "energy_charged_kWh": 55.7
+    },
+    {
+        "state_of_charge_percentage": 84,
+        "charge_speed_kW": 59,
+        "energy_charged_kWh": 56.4
+    },
+    {
+        "state_of_charge_percentage": 85,
+        "charge_speed_kW": 59,
+        "energy_charged_kWh": 57.0
+    },
+    {
+        "state_of_charge_percentage": 86,
+        "charge_speed_kW": 59,
+        "energy_charged_kWh": 57.7
+    },
+    {
+        "state_of_charge_percentage": 87,
+        "charge_speed_kW": 59,
+        "energy_charged_kWh": 58.4
+    },
+    {
+        "state_of_charge_percentage": 88,
+        "charge_speed_kW": 52,
+        "energy_charged_kWh": 59.0
+    },
+    {
+        "state_of_charge_percentage": 89,
+        "charge_speed_kW": 52,
+        "energy_charged_kWh": 59.7
+    },
+    {
+        "state_of_charge_percentage": 90,
+        "charge_speed_kW": 52,
+        "energy_charged_kWh": 60.4
+    },
+    {
+        "state_of_charge_percentage": 91,
+        "charge_speed_kW": 50,
+        "energy_charged_kWh": 61.1
+    },
+    {
+        "state_of_charge_percentage": 92,
+        "charge_speed_kW": 48,
+        "energy_charged_kWh": 61.7
+    },
+    {
+        "state_of_charge_percentage": 93,
+        "charge_speed_kW": 45,
+        "energy_charged_kWh": 62.4
+    },
+    {
+        "state_of_charge_percentage": 94,
+        "charge_speed_kW": 44,
+        "energy_charged_kWh": 63.1
+    },
+    {
+        "state_of_charge_percentage": 95,
+        "charge_speed_kW": 43,
+        "energy_charged_kWh": 63.7
+    },
+    {
+        "state_of_charge_percentage": 96,
+        "charge_speed_kW": 38,
+        "energy_charged_kWh": 64.4
+    },
+    {
+        "state_of_charge_percentage": 97,
+        "charge_speed_kW": 34,
+        "energy_charged_kWh": 65.1
+    },
+    {
+        "state_of_charge_percentage": 98,
+        "charge_speed_kW": 29,
+        "energy_charged_kWh": 65.8
+    },
+    {
+        "state_of_charge_percentage": 99,
+        "charge_speed_kW": 25,
+        "energy_charged_kWh": 66.4
+    },
+    {
+        "state_of_charge_percentage": 100,
+        "charge_speed_kW": 20,
+        "energy_charged_kWh": 67.1
+    }
+]
