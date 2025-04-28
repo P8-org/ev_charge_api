@@ -109,15 +109,6 @@ class ElectricChargeEnv(gym.Env):
                 self.chargers[charger_idx]['car_id'] = None
                 self.charging_car_ids.remove(car_id)
 
-        # Record finished cars in schedule
-        # for car_id in cars_fully_charged:
-        #     car = self.cars[car_id]
-        #     # print(car)
-        #     start = car.get('started_at')
-        #     end = self.t + 1
-        #     duration = end - start
-        #     self.schedule.append((start, [car_id], duration))
-
         for car_id in cars_fully_charged:
             car = self.cars[car_id]
             # print(car)
@@ -300,7 +291,7 @@ def run():
         # optional="HourDK,SpotPriceDKK",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
         limit=24*5, # Default=0, to limit set to a minimum of 72 hours
-        offset=10
+        offset=11
     )
     data = EnergiData().call_api(rd)
     print(f"Days of data: {len(data)/24}")
@@ -372,7 +363,6 @@ def run():
     # Print the schedule
     # print("Optimal Charging Schedule (per hour): ")
     for car in env.schedule:
-        # print(env.cars[car_ids[0]])
         hour_index = min(car['start_time'], len(times_48) - 1)  # prevent out of bounds
         start_time = times_48[hour_index]
         start_time_dt = start_time.astype('M8[s]').tolist()
@@ -381,6 +371,6 @@ def run():
     
     # print(env.schedule)
     # print(prices_48)
-    print(times_48)
+    # print(times_48)
     # print(charging_curves)
 
