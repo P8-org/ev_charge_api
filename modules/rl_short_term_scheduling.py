@@ -1,4 +1,4 @@
-# import rl_scheduling
+import rl_scheduling
 
 
 def generate_schedule(num_hours: int, initial_soc: float, battery_capacity: float, max_chargin_rate: float, prices: list[float], print_debug = False) -> list[float]:
@@ -19,6 +19,6 @@ def generate_schedule(num_hours: int, initial_soc: float, battery_capacity: floa
     epsilon = 0.1 # exploration rate
     episodes = 100_000 # episodes
 
-    # if (num_hours >= len(prices)): num_hours = len(prices)
-    #
-    # return rl_scheduling.get_schedule(num_hours, alpha, epsilon, episodes, initial_soc, battery_capacity, max_chargin_rate, prices, print_debug)
+    if (num_hours >= len(prices)): num_hours = len(prices)
+
+    return rl_scheduling.get_schedule(num_hours, alpha, epsilon, episodes, initial_soc, battery_capacity, max_chargin_rate, prices, print_debug)

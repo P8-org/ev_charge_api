@@ -21,7 +21,7 @@ def dqn_start_train():
     }
 
     data = {
-        "ref": "RL",  
+        "ref": "main",  #change to current branch
         "inputs": {
             "from": "fastapi",
             "info": "Start Model Training"
