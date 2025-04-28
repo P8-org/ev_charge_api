@@ -72,3 +72,19 @@ async def delete_ev_by_id(id: int, db: Session = Depends(get_db)):
     db.delete(ev)
     db.commit()
     return {"detail": "EV deleted successfully"}
+
+@router.put("/evs/{id}")
+async def put_ev_by_id(id: int, ev_create: EvCreate, db: Session = Depends(get_db)): # IGNORES 'car_model_id' wether its provided or not
+    ev_id = db.query(UserEV).filter(UserEV.id == id).update(
+        {
+            "user_set_name":ev_create.name,
+            "current_charge": ev_create.battery_level,
+        }
+    )
+
+    if not ev_id:
+        raise HTTPException(status_code=404, detail=f"EV with given id '{id}' was not found")
+    
+    db.commit()
+    return {"detail": f"EV with id: '{id}' updated successfully"}
+
