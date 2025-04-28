@@ -295,18 +295,18 @@ def run():
         startDate="StartOfYear-P1M",
         # startDate="StartOfDay",
         # endDate="StartOfDay-P1M",
-        endDate="StartOfDay-P6D",
+        # endDate="StartOfDay-P5D",
         dataset="Elspotprices",
         # optional="HourDK,SpotPriceDKK",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
         limit=24*5, # Default=0, to limit set to a minimum of 72 hours
-        offset=13
+        offset=10
     )
     data = EnergiData().call_api(rd)
     print(f"Days of data: {len(data)/24}")
 
-    prices = [i.SpotPriceDKK / 1000 for i in data][::-1]
-    times = [np.datetime64(i.HourDK) for i in data][::-1]
+    prices = [i.SpotPriceDKK / 1000 for i in data]
+    times = [np.datetime64(i.HourDK) for i in data]
 
     prices_np = np.asarray(prices, dtype=np.float32)
     times_np = np.asarray(times, dtype=np.datetime64)
@@ -314,14 +314,14 @@ def run():
     # Create 48-hour periods
     periods = []
     for start_idx in range(0, len(prices_np) - 47, 24):
-        prices_48 = prices_np[start_idx:start_idx + 24]
-        times_48 = times_np[start_idx:start_idx + 24]
+        prices_48 = prices_np[start_idx:start_idx + 24][::-1]
+        times_48 = times_np[start_idx:start_idx + 24][::-1]
         periods.append((prices_48, times_48))
 
     # split_idx = int(0.8 * len(periods))
     split_idx = len(periods) - 1 
-    train_periods = periods[:split_idx]
-    test_periods = periods[split_idx:]
+    train_periods = periods[split_idx:]
+    test_periods = periods[:split_idx]
     # print(test_periods)
 
 
@@ -381,5 +381,6 @@ def run():
     
     # print(env.schedule)
     # print(prices_48)
+    print(times_48)
     # print(charging_curves)
 
