@@ -324,9 +324,9 @@ def run():
             # print(agent.action_dim)
             train_agent(env, agent, num_episodes=num_episodes)
 
-        # if (isinstance(agent, DQNAgent)):
-        # # Save the trained model
-        #     agent.save("dqn_model.pth")
+        if (isinstance(agent, DQNAgent)):
+        # Save the trained model
+            agent.save("dqn_model.pth")
 
     # ------------------------------
     # Testing the Trained Agent
@@ -339,7 +339,7 @@ def run():
         action_dim = env.action_space.n
         agent = DQNAgent(state_dim, action_dim)
 
-    # agent.load("dqn_model.pth")
+    agent.load("dqn_model.pth")
 
     print("\n[bold underline]Testing Trained Agent[/bold underline]")
     print(f"\n[Testing] starting at {times_48[0]}")
