@@ -268,11 +268,14 @@ def run():
     """Runs the training and testing process for the electric charging environment."""
     cars = [
         {'id': 0, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 80, 'using_charger_id': -1},
-        {'id': 1, 'charged': False, 'charge': 40, 'charge_percentage': (40/60)*100, 'max_charge': 60, 'using_charger_id': -1},
+        {'id': 1, 'charged': False, 'charge': 40, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
         {'id': 2, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
+        {'id': 4, 'charged': False, 'charge': 20, 'charge_percentage': 0, 'max_charge': 80, 'using_charger_id': -1},
+        {'id': 5, 'charged': False, 'charge': 50, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
+        {'id': 6, 'charged': False, 'charge': 20, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
     ]
     charge_speed = 22
-    num_chargers = 1
+    num_chargers = 4
     num_episodes = 500
     rd = RequestDetail(
         startDate="StartOfYear-P1M",
