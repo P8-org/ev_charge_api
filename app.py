@@ -76,10 +76,10 @@ def schedule(num_hours: int, battery_level: float, battery_capacity: float, max_
     hour_dk = [record.HourDK for record in response]
     prices = [record.SpotPriceDKK / 1000 for record in response]
     schedule = generate_schedule(num_hours, battery_level, battery_capacity, max_chargin_rate, prices)
-    adjusted_schedule = adjust_rl_schedule(schedule,battery_capacity, max_chargin_rate)
+    adjusted_schedule = adjust_rl_schedule(schedule,battery_capacity - battery_level, max_chargin_rate)
     print(np.array(schedule))
     print(adjusted_schedule)
-    b = Benchmark(adjusted_schedule,prices,battery_capacity,max_chargin_rate)
+    b = Benchmark(adjusted_schedule,prices, battery_capacity - battery_level,max_chargin_rate)
     b.compare()
     return [{"time": h, "price": p, "charging": b} for h, p, b in zip(hour_dk, prices, adjusted_schedule)]
 
