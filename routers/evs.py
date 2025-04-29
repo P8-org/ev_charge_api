@@ -58,11 +58,7 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
     constraint.target_percentage = 0.8
 
     schedule = Schedule()
-    schedule.end = datetime.datetime.now()
-    schedule.start = datetime.datetime.now()
-    schedule.schedule_data = ""
-    schedule.num_hours = 0
-    schedule.start_charge = ev.current_charge
+
 
     ev.constraint = constraint
     ev.schedule = schedule

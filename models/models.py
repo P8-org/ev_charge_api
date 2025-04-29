@@ -1,3 +1,4 @@
+import datetime
 from sqlalchemy import Column, DateTime, Integer, String, Float, ForeignKey, Enum
 from sqlalchemy.orm import Session, Mapped, relationship
 import enum
@@ -20,6 +21,16 @@ class Constraint(Base):
 
 
 class Schedule(Base):
+    def __init__(self):
+        self.end = datetime.datetime.now()
+        self.start = datetime.datetime.now()
+        self.schedule_data = ""
+        self.num_hours = 0
+        self.start_charge = 0
+        self.price = 0
+        self.greedy_price = 0
+
+
     __tablename__ = "schedules"
     id = Column(Integer, primary_key=True, index=True)
     start = Column(DateTime, nullable=False)
@@ -27,6 +38,8 @@ class Schedule(Base):
     num_hours = Column(Integer, nullable=False)
     start_charge = Column(Float, nullable=False)
     schedule_data = Column(String)  # csv format, example: "20, 20, 0, 0, 0, 10" 
+    price = Column(Float, nullable=False)
+    greedy_price = Column(Float, nullable=False)
     ev_id = Column(Integer, ForeignKey("user_evs.id"), nullable=False)
     ev: Mapped["UserEV"] = relationship(back_populates="schedule")
 
