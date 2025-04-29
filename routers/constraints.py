@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 from database.db import get_db
 from models.models import UserEV
+from routers.schedules import make_schedule
 
 
 router = APIRouter()
@@ -13,8 +14,9 @@ class ConstraintForm(BaseModel):
     target_percentage: float = 0.8
 
 
-@router.post("/evs/{ev_id}/constraints")
-async def post_constraint(ev_id: int, form: ConstraintForm, db: Session = Depends(get_db)):
+@router.patch("/evs/{ev_id}/constraints")
+async def edit_constraint(ev_id: int, form: ConstraintForm, db: Session = Depends(get_db)):
+    print(form)
     ev: UserEV = db.query(UserEV).options(
         joinedload(UserEV.constraint),
         joinedload(UserEV.schedule)
@@ -35,3 +37,4 @@ async def post_constraint(ev_id: int, form: ConstraintForm, db: Session = Depend
     ev.constraint.target_percentage = target_percentage
 
     db.commit()
+    await make_schedule(ev_id, db)
