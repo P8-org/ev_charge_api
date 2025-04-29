@@ -9,6 +9,7 @@ from models.models import UserEV
 router = APIRouter()
 
 class ConstraintForm(BaseModel):
+    start_time: datetime.datetime = datetime.datetime.now()
     deadline: datetime.datetime = datetime.datetime.now() + datetime.timedelta(days=1)
     target_percentage: float = 0.8
 
@@ -23,6 +24,7 @@ async def post_constraint(ev_id: int, form: ConstraintForm, db: Session = Depend
     if ev is None:
         raise HTTPException(status_code=404, detail=f"EV with id {ev_id} not found")
 
+    start_time = form.start_time
     deadline = form.deadline
     target_percentage = form.target_percentage
 
@@ -30,7 +32,10 @@ async def post_constraint(ev_id: int, form: ConstraintForm, db: Session = Depend
         raise HTTPException(status_code=400, detail="Target percentage must be between 0.0 and 1.0")
     if deadline < datetime.datetime.now():
         raise HTTPException(status_code=400, detail="Deadline must be in the future")
-    
+    if starttime >= deadline:
+        raise HTTPException(status_code=400, detail="Starttime must be before deadline")
+
+    ev.constraint.starttime = starttime
     ev.constraint.charged_by = deadline
     ev.constraint.target_percentage = target_percentage
 
