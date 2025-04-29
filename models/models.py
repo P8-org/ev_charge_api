@@ -8,6 +8,7 @@ class Constraint(Base):
     __tablename__ = "constraints"
     id = Column(Integer, primary_key=True, index=True)
     charged_by = Column(DateTime, nullable=False)
+    start_time = Column(DateTime, nullable=False)
     target_percentage = Column(Float, nullable=False)
     ev_id = Column(Integer, ForeignKey("user_evs.id"), nullable=False)
     ev: Mapped["UserEV"] = relationship(back_populates="constraint")
