@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from rich import print
 from database.base import Base
 from database.db import engine, get_db, seed_db
@@ -13,6 +13,7 @@ import numpy as np
 import uvicorn
 
 from apis.EnergiData import EnergiData, RequestDetail
+from websocket_manager import WSManager
 
 
 
@@ -83,6 +84,25 @@ def schedule(num_hours: int, battery_level: float, battery_capacity: float, max_
     b.compare()
     return [{"time": h, "price": p, "charging": b} for h, p, b in zip(hour_dk, prices, adjusted_schedule)]
 
+ws_manager = WSManager()
+
+@app.middleware("http")
+async def notify_websockets_on_change(request: Request, call_next):
+    response = await call_next(request)
+
+    if request.method in ["POST", "PUT", "PATCH", "DELETE"]:
+        await ws_manager.broadcast(f"Change detected")
+
+    return response
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await ws_manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
 
 if __name__ == "__main__":
     uvicorn.run(app="app:app", reload=True, host="0.0.0.0")
