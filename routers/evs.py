@@ -110,10 +110,11 @@ async def delete_ev_by_id(id: int, db: Session = Depends(get_db)):
     return {"detail": "EV deleted successfully"}
 
 @router.put("/evs/{id}")
-async def put_ev_by_id(id: int, ev_create: EvCreate, db: Session = Depends(get_db)): # IGNORES 'car_model_id' wether its provided or not
+async def put_ev_by_id(id: int, ev_create: EvCreate, db: Session = Depends(get_db)):
     ev_id = db.query(UserEV).filter(UserEV.id == id).update(
         {
             "user_set_name":ev_create.name,
+            "car_model_id": ev_create.car_model_id,
             "current_charge": ev_create.battery_level,
         }
     )
