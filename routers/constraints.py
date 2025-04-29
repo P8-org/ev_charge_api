@@ -35,7 +35,7 @@ async def post_constraint(ev_id: int, form: ConstraintForm, db: Session = Depend
     if starttime >= deadline:
         raise HTTPException(status_code=400, detail="Starttime must be before deadline")
 
-    ev.constraint.starttime = starttime
+    ev.constraint.starttime = start_time
     ev.constraint.charged_by = deadline
     ev.constraint.target_percentage = target_percentage
 
