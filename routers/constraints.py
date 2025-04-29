@@ -42,7 +42,4 @@ async def edit_constraint(ev_id: int, form: ConstraintForm, db: Session = Depend
     ev.constraint.target_percentage = target_percentage
 
     db.commit()
-<<<<<<< HEAD
-=======
     await make_schedule(ev_id, db)
->>>>>>> origin/main
