@@ -10,3 +10,4 @@ gymnasium
 maturin # for rust bindings
 cvxpy
 pandas
+websockets
