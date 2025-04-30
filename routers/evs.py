@@ -53,11 +53,6 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
 
     ev.max_charging_power = ev.car_model.max_charging_power if ev_create.max_charging_power is None else ev_create.max_charging_power
 
-    constraint = Constraint()
-    constraint.charged_by = datetime.datetime.now() + datetime.timedelta(days=1)
-    constraint.start_time = datetime.datetime.now()
-    constraint.target_percentage = 0.8
-
     schedule = Schedule()
     schedule.end = datetime.datetime.now()
     schedule.start = datetime.datetime.now()
@@ -65,7 +60,6 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
     schedule.num_hours = 0
     schedule.start_charge = ev.current_charge
 
-    ev.constraint = constraint
     ev.schedule = schedule
     db.add(ev)
     db.commit()

@@ -1,7 +1,7 @@
 from sqlalchemy import Column, DateTime, Integer, String, Float, ForeignKey, Enum
 from sqlalchemy.orm import Session, Mapped, relationship
 import enum
-
+from typing import List
 from database.base import Base
 
 
@@ -10,14 +10,14 @@ class State(enum.Enum):
     CHARGING = "charging"
     DISCONNECTED = "disconnected"
 
-class Constraint(Base):
+class constraint(Base):
     __tablename__ = "constraints"
     id = Column(Integer, primary_key=True, index=True)
     charged_by = Column(DateTime, nullable=False)
     start_time = Column(DateTime, nullable=False)
     target_percentage = Column(Float, nullable=False)
     ev_id = Column(Integer, ForeignKey("user_evs.id"), nullable=False)
-    ev: Mapped["UserEV"] = relationship(back_populates="constraint")
+    ev: Mapped["UserEV"] = relationship(back_populates="constraints")
 
 
 class Schedule(Base):
@@ -59,8 +59,8 @@ class UserEV(Base):
 
     car_model_id = Column(Integer, ForeignKey("car_models.id"), nullable=False)
     car_model: Mapped["CarModel"] = relationship("CarModel", back_populates="user_evs")
-    constraint: Mapped["Constraint"] = relationship(
-        back_populates="ev", cascade="all, delete-orphan", uselist=False
+    constraints: Mapped[List["Constraint"]] = relationship(
+    back_populates="ev", cascade="all, delete-orphan", lazy="joined"
     )
     schedule: Mapped["Schedule"] = relationship(
         back_populates="ev", cascade="all, delete-orphan", uselist=False

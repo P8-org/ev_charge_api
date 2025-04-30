@@ -15,7 +15,7 @@ class ConstraintForm(BaseModel):
     target_percentage: float = 0.8
 
 
-@router.patch("/evs/{ev_id}/constraints")
+@router.post("/evs/{ev_id}/constraints")
 async def edit_constraint(ev_id: int, form: ConstraintForm, db: Session = Depends(get_db)):
     print(form)
     ev: UserEV = db.query(UserEV).options(
@@ -34,7 +34,7 @@ async def edit_constraint(ev_id: int, form: ConstraintForm, db: Session = Depend
         raise HTTPException(status_code=400, detail="Target percentage must be between 0.0 and 1.0")
     if deadline < datetime.datetime.now():
         raise HTTPException(status_code=400, detail="Deadline must be in the future")
-    if starttime >= deadline:
+    if start_time >= deadline:
         raise HTTPException(status_code=400, detail="Starttime must be before deadline")
 
     ev.constraint.starttime = start_time
