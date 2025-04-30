@@ -1,0 +1,23 @@
+name: AI-LAB make virtualenv
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "fastapi"
+        required: true
+        default: "fastapi"
+      info:
+        description: "Start Make Virtualenv"
+        required: false
+
+jobs:
+  train:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - name: Install virtualenv
+        run: srun singularity exec /ceph/container/python/python_3.10.sif pip install --user virtualenv
+      - name: Make virtualenv
+        run: srun singularity exec /ceph/container/python/python_3.10.sif ~/.local/bin/virtualenv ~/my-virtual-env
+      - name: Install requirements
+        run: srun singularity exec --bind ~/my-virtual-env:/my-virtual-env /ceph/container/python/python_3.10.sif /bin/bash -c "source /my-virtual-env/bin/activate && python3 -m pip install -r requirements.txt"

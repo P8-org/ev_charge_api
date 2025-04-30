@@ -67,6 +67,7 @@ def power(): # should be replaced, but proof-of-concept
 
 
  
+
 @app.get("/rl_schedule") # should also be replaced. also proof of concept :)
 def schedule(num_hours: int, battery_level: float, battery_capacity: float, max_chargin_rate: float):
     formatted_time = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M")
