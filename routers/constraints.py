@@ -16,7 +16,6 @@ class ConstraintForm(BaseModel):
 
 @router.patch("/evs/{ev_id}/constraints")
 async def edit_constraint(ev_id: int, form: ConstraintForm, db: Session = Depends(get_db)):
-    print(form)
     ev: UserEV = db.query(UserEV).options(
         joinedload(UserEV.constraint),
         joinedload(UserEV.schedule)
