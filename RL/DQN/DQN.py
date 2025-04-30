@@ -286,12 +286,12 @@ def run_dqn():
         endDate="2024-12-31T12:00",
         dataset="Elspotprices",
         # optional="HourDK,SpotPriceDKK",
-        sort_data="HourDK DESC",
+        sort_data="HourDK ASC",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
         limit=24*0, # Default=0, to limit set to a minimum of 72 hours
         offset=0
     )
-    data = EnergiData().call_api(rd)[::-1]
+    data = EnergiData().call_api(rd)
     print(f"Days of data: {len(data)/24}")
 
     prices = [i.SpotPriceDKK / 1000 for i in data]
