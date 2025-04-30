@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 from database.db import get_db
-from models.models import UserEV
+from models.models import UserEV, Constraint
 from routers.schedules import make_schedule
 
 
@@ -19,7 +19,7 @@ class ConstraintForm(BaseModel):
 async def edit_constraint(ev_id: int, form: ConstraintForm, db: Session = Depends(get_db)):
     print(form)
     ev: UserEV = db.query(UserEV).options(
-        joinedload(UserEV.constraint),
+        joinedload(UserEV.constraints),
         joinedload(UserEV.schedule)
     ).get(ev_id)
 
@@ -37,9 +37,15 @@ async def edit_constraint(ev_id: int, form: ConstraintForm, db: Session = Depend
     if start_time >= deadline:
         raise HTTPException(status_code=400, detail="Starttime must be before deadline")
 
-    ev.constraint.starttime = start_time
-    ev.constraint.charged_by = deadline
-    ev.constraint.target_percentage = target_percentage
+    new_constraint = Constraint(
+        start_time=start_time,
+        charged_by=deadline,
+        target_percentage=target_percentage,
+        ev_id=ev.id
+    )
+    db.add(new_constraint)
+    db.commit()
+    db.refresh(new_constraint)
 
     db.commit()
-    await make_schedule(ev_id, db)
+    # await make_schedule(ev_id, db)
