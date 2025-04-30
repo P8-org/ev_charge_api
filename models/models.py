@@ -10,7 +10,7 @@ class State(enum.Enum):
     CHARGING = "charging"
     DISCONNECTED = "disconnected"
 
-class constraint(Base):
+class Constraint(Base):
     __tablename__ = "constraints"
     id = Column(Integer, primary_key=True, index=True)
     charged_by = Column(DateTime, nullable=False)

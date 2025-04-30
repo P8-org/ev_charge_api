@@ -16,7 +16,7 @@ router = APIRouter()
 @router.post("/schedules/generate/{ev_id}")
 async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     ev: UserEV = db.query(UserEV).options(
-        joinedload(UserEV.constraint),
+        joinedload(UserEV.constraints),
         joinedload(UserEV.schedule),
         joinedload(UserEV.car_model)
     ).get(ev_id)
@@ -24,10 +24,10 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     if ev is None:
         raise HTTPException(status_code=404, detail=f"EV with id {ev_id} not found")
 
-    duration: datetime.timedelta = ev.constraint.charged_by - datetime.datetime.now()
+    duration: datetime.timedelta = ev.constraints.charged_by - datetime.datetime.now()
     num_hours = math.ceil(duration.total_seconds() / 60 / 60)
     if num_hours <= 0: raise HTTPException(status_code=400, detail="Charging duration is negative")
-    target_kwh = ev.constraint.target_percentage * ev.car_model.battery_capacity
+    target_kwh = ev.constraints.target_percentage * ev.car_model.battery_capacity
     e = EnergiData()
     formatted_time = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M")
     rd = RequestDetail(startDate=formatted_time, dataset="Elspotprices", filter_json=json.dumps({"PriceArea": ["DK1"]}), sort_data="HourDK ASC")
