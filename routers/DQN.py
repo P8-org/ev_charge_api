@@ -4,10 +4,15 @@ import requests
 import zipfile
 from io import BytesIO
 from dotenv import load_dotenv
+from RL.DQN.DQN import run_dqn
 
 load_dotenv()
 
 router = APIRouter()
+
+@router.get("/run_dqn")
+def run(): 
+    return run_dqn()
 
 @router.post("/train")
 def dqn_start_train(branch_name="main"):

@@ -10,6 +10,7 @@ from collections import deque
 import json
 from rich import print
 import os.path
+from models.models import Schedule
 
 from apis.EnergiData import EnergiData, RequestDetail
  
@@ -272,26 +273,25 @@ def run_dqn():
     cars = [
         {'id': 0, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 80, 'using_charger_id': -1},
         {'id': 1, 'charged': False, 'charge': 40, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
-        {'id': 2, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
-        {'id': 3, 'charged': False, 'charge': 20, 'charge_percentage': 0, 'max_charge': 80, 'using_charger_id': -1},
-        {'id': 4, 'charged': False, 'charge': 50, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
-        {'id': 5, 'charged': False, 'charge': 20, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
+        # {'id': 2, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
+        # {'id': 3, 'charged': False, 'charge': 20, 'charge_percentage': 0, 'max_charge': 80, 'using_charger_id': -1},
+        # {'id': 4, 'charged': False, 'charge': 50, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
+        # {'id': 5, 'charged': False, 'charge': 20, 'charge_percentage': 0, 'max_charge': 60, 'using_charger_id': -1},
     ]
     charge_speed = 22
-    num_chargers = 4
-    num_episodes = 2000
+    num_chargers = 1
+    num_episodes = 1000
     rd = RequestDetail(
-        startDate="StartOfYear-P1M",
-        # startDate="StartOfDay",
-        # endDate="StartOfDay-P1M",
-        # endDate="StartOfDay-P5D",
+        startDate="2023-12-31T13:00",
+        endDate="2024-12-31T12:00",
         dataset="Elspotprices",
         # optional="HourDK,SpotPriceDKK",
+        sort_data="HourDK DESC",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
-        limit=24*5, # Default=0, to limit set to a minimum of 72 hours
-        offset=11
+        limit=24*0, # Default=0, to limit set to a minimum of 72 hours
+        offset=0
     )
-    data = EnergiData().call_api(rd)
+    data = EnergiData().call_api(rd)[::-1]
     print(f"Days of data: {len(data)/24}")
 
     prices = [i.SpotPriceDKK / 1000 for i in data]
@@ -303,16 +303,14 @@ def run_dqn():
     # Create 48-hour periods
     periods = []
     for start_idx in range(0, len(prices_np) - 47, 24):
-        prices_48 = prices_np[start_idx:start_idx + 24][::-1]
-        times_48 = times_np[start_idx:start_idx + 24][::-1]
+        prices_48 = prices_np[start_idx:start_idx + 24]
+        times_48 = times_np[start_idx:start_idx + 24]
         periods.append((prices_48, times_48))
 
     # split_idx = int(0.8 * len(periods))
     split_idx = len(periods) - 1 
-    train_periods = periods[split_idx:]
-    test_periods = periods[:split_idx]
-    # print(test_periods)
-
+    train_periods = periods[:split_idx]
+    test_periods = periods[split_idx:]
 
     agent = None
 
@@ -366,9 +364,9 @@ def run_dqn():
         start_time_dt = start_time.astype('M8[s]').tolist()
         start_time_str = start_time_dt.strftime("%Y-%m-%d %H:%M")
         print(f"At {start_time_str} (Price: {prices_48[hour_index]:.2f}) -> Charged: {car['car_id']} (Hour {car['start_time']}) Charge Time: {car['duration']}")
-    
+
     # print(env.schedule)
     # print(prices_48)
     # print(times_48)
     # print(charging_curves)
-
+    # return env.schedule
