@@ -140,11 +140,9 @@ class ElectricChargeEnv(gym.Env):
                     car['charge_kw'] = []  # Start log when charging process begins
 
                 # Charge
-                # car['charge'] += self.charge_speed
                 car['charge'] += car['charge_speed']
                 car['charge_time'] = self.t + 1
                 car['charge_percentage'] = (car['charge'] / car['max_charge']) * 100
-                # car['charge_kw'].append(self.charge_speed)
                 car['charge_kw'].append(car['charge_speed'])
                 self.charging_car_ids.append(car_id)
             else:
