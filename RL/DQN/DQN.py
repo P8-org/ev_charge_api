@@ -73,16 +73,9 @@ class ElectricChargeEnv(gym.Env):
         Decide whether to charge the car now based on future prices and urgency.
         """
         remaining_charge = car['max_charge'] - car['charge']
-        # hours_needed = int(np.ceil(remaining_charge / self.charge_speed))
         hours_needed = int(np.ceil(remaining_charge / car['charge_speed']))
 
-        # if hours_needed >= hours_left:
-        #     return True  # Not enough time left — must charge now
-
         constraints = car['constraints']
-        within_constraints = True
-        # future_prices = self.prices[self.t:self.t + hours_left]
-
         if 'end' in constraints and hours_needed >= (constraints['end'] - self.t):
             return True
 
