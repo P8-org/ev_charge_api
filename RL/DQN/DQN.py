@@ -275,7 +275,7 @@ class DQNAgent:
 
     def update_target(self):
         self.target_network.load_state_dict(self.q_network.state_dict())
-
+    
     def save(self, path):
         torch.save({
             'q_network_state_dict': self.q_network.state_dict(),
@@ -329,6 +329,25 @@ def train_agent(env, agent, num_episodes=500, print_iter=False):
 # ------------------------------
 # Usage
 # ------------------------------
+
+def save_progress(last_index):
+    with open("./train_progress", "w") as f:
+        json.dump({"last_trained_index": last_index}, f)
+
+def load_progress():
+    if os.path.exists("./train_progress"):
+        with open("./train_progress", "r") as f:
+            return json.load(f).get("last_trained_index", -1)
+    else:
+        print("[yellow]The file does not exist, could not be loaded[/yellow]") 
+        return -1
+
+def remove_progress():
+    if os.path.exists("./train_progress"):
+        os.remove("./train_progress")
+    else:
+        print("[yellow]The file does not exist, could not be removed[/yellow]") 
+
 def run_dqn():
     """Runs the training and testing process for the electric charging environment."""
     cars = [
@@ -342,7 +361,8 @@ def run_dqn():
     ]
     num_chargers = len(cars)
     # num_episodes = 500
-    num_episodes = 2000
+    num_episodes = 1000
+    # num_episodes = 2000
     rd = RequestDetail(
         startDate="2023-12-31T13:00",
         endDate="2024-12-31T12:00",
@@ -377,10 +397,15 @@ def run_dqn():
     test_periods = periods[split_idx:]
 
     agent = None
+    last_trained_index = load_progress()
 
-    if not os.path.isfile("dqn_model.pth"):
+    # if not os.path.isfile("dqn_model.pth"):
+    if not len(train_periods) == last_trained_index:
         print(f"Number of training periods: {len(train_periods)}")
         for i, (prices_48, times_48) in enumerate(train_periods):
+            if i <= last_trained_index:
+                continue  # Skip already trained periods
+
             print(f"\n[Training] Period {i+1}/{len(train_periods)} starting at {times_48[0]}")
             env = ElectricChargeEnv(prices_48, times_48, cars, num_chargers)
             state_dim = env.observation_space.shape[0]
@@ -391,10 +416,13 @@ def run_dqn():
 
             # print(agent.action_dim)
             train_agent(env, agent, num_episodes=num_episodes)
+            save_progress(i)
 
-        if (isinstance(agent, DQNAgent)):
-        # Save the trained model
-            agent.save("dqn_model.pth")
+            if (isinstance(agent, DQNAgent)):
+            # Save the trained model
+                agent.save("dqn_model.pth")
+
+        remove_progress()
 
     # ------------------------------
     # Testing the Trained Agent
