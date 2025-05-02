@@ -4,6 +4,7 @@ import math
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from apis.EnergiData import EnergiData, RequestDetail
+from modules.benchmark_prices import Benchmark
 from modules.linear_optimization_controller import adjust_rl_schedule
 from modules.rl_short_term_scheduling import generate_schedule
 
@@ -50,6 +51,10 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     ev.schedule.start = (datetime.datetime.now() + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
     ev.schedule.end = ev.schedule.start + datetime.timedelta(hours=ev.schedule.num_hours)
     ev.schedule.start_charge = ev.current_charge
+
+    b = Benchmark(schedule,prices, target_kwh - ev.current_charge, max_power)
+    ev.schedule.price = b.optimized_schedule_price()
+    ev.schedule.greedy_price = b.greedy_schedule_price()
 
     db.commit()
 

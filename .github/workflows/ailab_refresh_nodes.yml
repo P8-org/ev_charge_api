@@ -1,0 +1,20 @@
+name: AI-LAB refresh nodes
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "github ui"
+        required: true
+        default: "github ui"
+      info:
+        description: "Refresh nodes"
+        required: false
+
+jobs:
+  train:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - name: Refresh Nodes
+        run: |
+          refresh-nodes

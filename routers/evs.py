@@ -54,11 +54,7 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
     ev.max_charging_power = ev.car_model.max_charging_power if ev_create.max_charging_power is None else ev_create.max_charging_power
 
     schedule = Schedule()
-    schedule.end = datetime.datetime.now()
-    schedule.start = datetime.datetime.now()
-    schedule.schedule_data = ""
-    schedule.num_hours = 0
-    schedule.start_charge = ev.current_charge
+
 
     ev.schedule = schedule
     db.add(ev)

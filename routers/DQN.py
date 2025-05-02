@@ -10,7 +10,7 @@ load_dotenv()
 router = APIRouter()
 
 @router.post("/train")
-def dqn_start_train():
+def dqn_start_train(branch_name="main"):
     GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
     if not GITHUB_TOKEN:
         raise ValueError("GITHUB_TOKEN environment variable is not set")
@@ -21,7 +21,7 @@ def dqn_start_train():
     }
 
     data = {
-        "ref": "RL",  
+        "ref": branch_name,  #change to current branch
         "inputs": {
             "from": "fastapi",
             "info": "Start Model Training"
@@ -38,7 +38,7 @@ def dqn_start_train():
         print(response.text)
 
 
-@router.get("/dqn_train_status")
+@router.get("/train_status")
 def dqn_train_status():
     r = requests.get("https://api.github.com/repos/P8-org/ev_charge_api/actions/workflows/ailab.yml/runs")
     status = r.json()["workflow_runs"][0]["status"]
@@ -47,13 +47,13 @@ def dqn_train_status():
 
 
 
-@router.get("/download")
+@router.get("/download_dqn")
 def dqn_download_artifact():
 
     OWNER = "P8-org"
     REPO = "ev_charge_api"
     GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-    OUTPUT_DIR = "models"
+    OUTPUT_DIR = "."
 
     headers = {
         "Authorization": f"Bearer {GITHUB_TOKEN}",
