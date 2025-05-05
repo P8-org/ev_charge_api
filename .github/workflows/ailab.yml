@@ -19,32 +19,40 @@ jobs:
         uses: actions/checkout@v3
       - name: AI-LAB Train model
         run: sbatch --output=training_output.txt RL/DQN/run.sh
-      - name: Check if there are jobs in the queue
+      - name: Wait for model file to appear
         run: |
-          echo "Waiting for no jobs in Slurm queue (two consecutive checks)..."
-          consecutive_empty_checks=0
+          echo "Waiting for model file to be created: dqn_model.pth..."
+          file_path="/ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/dqn_model.pth"
+          max_checks=10080  # Wait up to 7 days (10080 minutes)
+          checks=0
 
-          while true; do
-            jobs_in_queue=$(squeue --me | grep -v 'JOBID' | wc -l)
+          while [ ! -f "$file_path" ]; do
+            checks=$(expr $checks + 1)
 
-            if [ "$jobs_in_queue" -eq 0 ]; then
-              ((consecutive_empty_checks++))
-              echo "No jobs in the queue (check $consecutive_empty_checks/2)."
-              if [ "$consecutive_empty_checks" -ge 2 ]; then
-                echo "No jobs detected in two consecutive checks. Continuing."
-                break
-              fi
-            else
-              echo "There are $jobs_in_queue jobs in the queue. Waiting..."
-              consecutive_empty_checks=0
+            if [ "$checks" -ge "$max_checks" ]; then
+              echo "Timeout reached waiting for dqn_model.pth."
+              exit 1
             fi
 
-            sleep 60  # Wait 60 seconds before checking again
+            echo "Model file not found yet (check ${checks}/${max_checks}). Sleeping 60s..."
+            sleep 60
           done
+
+          echo "Model file detected. Proceeding."
       - name: Archive model
         uses: actions/upload-artifact@v4
         with:
           name: model
           path: /ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/dqn_model.pth
+      - name: Archive train_progress (if not finished)
+        uses: actions/upload-artifact@v4
+        with:
+          name: model
+          path: /ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/train_progress
+      - name: Archive temp model (if not finished)
+        uses: actions/upload-artifact@v4
+        with:
+          name: model
+          path: /ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/dqn_model_temp.pth
       - name: Print Results
         run: echo /ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/training_output.txt 
