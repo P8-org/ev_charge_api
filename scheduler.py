@@ -5,7 +5,9 @@ from database.db import get_db
 from models.models import UserEV
 from routers.schedules import make_schedule
 
-async def my_func():
+import asyncio
+
+async def update_schedules():
     db = next(get_db())
     evs: list[UserEV] = db.query(UserEV).all()
     for ev in evs:
@@ -16,6 +18,6 @@ async def my_func():
             pass 
 
 scheduler = BackgroundScheduler()
-trigger = CronTrigger(hour=13, minute=0)
-scheduler.add_job(my_func, trigger=trigger)
+trigger = CronTrigger(hour=11, minute=15)
+scheduler.add_job(lambda: asyncio.run(update_schedules()), trigger=trigger)
 scheduler.start()
