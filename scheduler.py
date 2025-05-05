@@ -18,6 +18,6 @@ async def update_schedules():
             pass 
 
 scheduler = BackgroundScheduler()
-trigger = CronTrigger(hour=11, minute=15)
+trigger = CronTrigger(hour=13, minute=0)
 scheduler.add_job(lambda: asyncio.run(update_schedules()), trigger=trigger)
 scheduler.start()
