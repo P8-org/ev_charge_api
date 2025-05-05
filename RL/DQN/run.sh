@@ -6,8 +6,8 @@
 #SBATCH --error=file-test.err # Name of the error file
 #SBATCH --mem=64G               # Memory
 #SBATCH --cpus-per-task=32      # CPUs per task
-#SBATCH --gres=gpu:2            # Allocated GPUs
-#SBATCH --time=00:05:00         # Maximum run time
+#SBATCH --gres=gpu:5            # Allocated GPUs
+#SBATCH --time=12:59:00         # Maximum run time
 #SBATCH --requeue
 
 #######################################################################################
