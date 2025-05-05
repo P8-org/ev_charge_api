@@ -21,17 +21,25 @@ jobs:
         run: sbatch --output=training_output.txt RL/DQN/run.sh
       - name: Check if there are jobs in the queue
         run: |
-          echo "Waiting for no jobs in Slurm queue..."
+          echo "Waiting for no jobs in Slurm queue (two consecutive checks)..."
+          consecutive_empty_checks=0
+
           while true; do
-            # Check for jobs in the queue using squeue
             jobs_in_queue=$(squeue --me | grep -v 'JOBID' | wc -l)
+
             if [ "$jobs_in_queue" -eq 0 ]; then
-              echo "No jobs in the queue. Continuing."
-              break
+              ((consecutive_empty_checks++))
+              echo "No jobs in the queue (check $consecutive_empty_checks/2)."
+              if [ "$consecutive_empty_checks" -ge 2 ]; then
+                echo "No jobs detected in two consecutive checks. Continuing."
+                break
+              fi
             else
               echo "There are $jobs_in_queue jobs in the queue. Waiting..."
-              sleep 60  # Wait 60 seconds before checking again
+              consecutive_empty_checks=0
             fi
+
+            sleep 60  # Wait 60 seconds before checking again
           done
       - name: Archive model
         uses: actions/upload-artifact@v4

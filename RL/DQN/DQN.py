@@ -345,36 +345,34 @@ def load_progress():
 def remove_progress():
     if os.path.exists("./train_progress"):
         os.remove("./train_progress")
+        os.remove("./dqn_model_temp.pth")
     else:
         print("[yellow]The file does not exist, could not be removed[/yellow]") 
 
-def run_dqn():
+def process_data(cars: list[dict], rd:RequestDetail, num_chargers:int = None, num_episodes=2000):
     """Runs the training and testing process for the electric charging environment."""
-    cars = [
-        {'id': 0, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 80, 'charge_speed': 22, 'constraints': {}},
-        # {'id': 0, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 80, 'charge_speed': 22, 'constraints': {"start": 10, "end": 17}},
-        # {'id': 1, 'charged': False, 'charge': 40, 'charge_percentage': 0, 'max_charge': 60, 'charge_speed': 22, 'constraints': {"start": 2, "end": 5}},
-        # {'id': 2, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 60, 'charge_speed': 10, 'constraints': {"start":12}},
-        # {'id': 3, 'charged': False, 'charge': 20, 'charge_percentage': 0, 'max_charge': 80, 'charge_speed': 15, 'constraints': {"end":14}},
-        # {'id': 4, 'charged': False, 'charge': 0, 'charge_percentage': 0, 'max_charge': 60, 'charge_speed': 22, 'constraints': {}},
-        # {'id': 5, 'charged': False, 'charge': 20, 'charge_percentage': 0, 'max_charge': 60, 'charge_speed': 12, 'constraints': {}},
-    ]
-    num_chargers = len(cars)
-    # num_episodes = 500
-    num_episodes = 1000
-    # num_episodes = 2000
-    rd = RequestDetail(
-        startDate="2023-12-31T13:00",
-        endDate="2024-12-31T12:00",
-        # startDate="2024-04-30T13:00",
-        # endDate="2024-12-31T12:00",
-        dataset="Elspotprices",
-        # optional="HourDK,SpotPriceDKK",
-        sort_data="HourDK ASC",
-        filter_json=json.dumps({"PriceArea": ["DK1"]}),
-        limit=24*0, # Default=0, to limit set to a minimum of 72 hours
-        offset=0
-    )
+
+    data = EnergiData().call_api(rd)
+    print(f"Days of data: {len(data)/24}")
+
+    prices = [i.SpotPriceDKK / 1000 for i in data]
+    times = [np.datetime64(i.HourDK) for i in data]
+
+    prices_np = np.asarray(prices, dtype=np.float32)
+    times_np = np.asarray(times, dtype=np.datetime64)
+
+    # Create 48-hour periods
+    periods = []
+    for start_idx in range(0, len(prices_np) - 47, 24):
+        prices_48 = prices_np[start_idx:start_idx + 24]
+        times_48 = times_np[start_idx:start_idx + 24]
+        periods.append((prices_48, times_48))
+    
+    return periods
+
+def run_dqn(cars: list[dict], rd:RequestDetail, num_chargers:int = None, num_episodes=2000):
+    if num_chargers is None:
+        num_chargers = len(cars)
     data = EnergiData().call_api(rd)
     print(f"Days of data: {len(data)/24}")
 
@@ -398,9 +396,12 @@ def run_dqn():
 
     agent = None
     last_trained_index = load_progress()
+    finished = False
 
-    # if not os.path.isfile("dqn_model.pth"):
-    if not len(train_periods) == last_trained_index:
+    if os.path.isfile("dqn_model.pth"):
+        finished = True
+
+    if finished is False and not len(train_periods) == last_trained_index:
         print(f"Number of training periods: {len(train_periods)}")
         for i, (prices_48, times_48) in enumerate(train_periods):
             if i <= last_trained_index:
@@ -418,9 +419,11 @@ def run_dqn():
             train_agent(env, agent, num_episodes=num_episodes)
             save_progress(i)
 
-            if (isinstance(agent, DQNAgent)):
-            # Save the trained model
-                agent.save("dqn_model.pth")
+            agent.save("dqn_model_temp.pth")
+
+        if (isinstance(agent, DQNAgent)):
+        # Save the trained model
+            agent.save("dqn_model.pth")
 
         remove_progress()
 
@@ -430,10 +433,9 @@ def run_dqn():
     prices_48, times_48 = test_periods[0]
 
     env = ElectricChargeEnv(prices_48, times_48, cars, num_chargers)
-    if agent is None:
-        state_dim = env.observation_space.shape[0]
-        action_dim = env.action_space.n
-        agent = DQNAgent(state_dim, action_dim)
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.n
+    agent = DQNAgent(state_dim, action_dim)
 
     agent.load("dqn_model.pth")
 
