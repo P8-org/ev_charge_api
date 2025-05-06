@@ -13,6 +13,7 @@ import numpy as np
 import uvicorn
 
 from apis.EnergiData import EnergiData, RequestDetail
+from scheduler import scheduler
 from websocket_manager import WSManager
 
 
@@ -24,6 +25,7 @@ async def lifespan(app: FastAPI):
     seed_db()
     yield
     # runs after shutdown oftserver
+    scheduler.shutdown()
     print("app shutdown complete")
 
 

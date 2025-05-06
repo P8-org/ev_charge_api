@@ -5,8 +5,6 @@ from sqlalchemy.orm import Session, joinedload
 
 from database.db import get_db
 from models.models import CarModel, Constraint, State, UserEV, Schedule
-from modules.rl_short_term_scheduling import generate_schedule
-import enum
 
 
 router = APIRouter()
