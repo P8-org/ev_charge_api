@@ -7,7 +7,7 @@
 #SBATCH --mem=64G               # Memory
 #SBATCH --cpus-per-task=32      # CPUs per task
 #SBATCH --gres=gpu:5            # Allocated GPUs
-#SBATCH --time=12:59:00         # Maximum run time
+#SBATCH --time=11:59:00         # Maximum run time
 #SBATCH --requeue
 
 #######################################################################################

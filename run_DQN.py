@@ -38,7 +38,7 @@ rd = RequestDetail(
 train_dqn(cars=cars,rd=rd,num_chargers=num_chargers,num_episodes=num_episodes)
 
 rd = RequestDetail(
-    startDate="2025-05-01T13:00",
+    startDate="2025-05-04T13:00",
     endDate="2025-05-05T13:00",
     dataset="Elspotprices",
     # optional="HourDK,SpotPriceDKK",
