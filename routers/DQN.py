@@ -1,46 +1,52 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 import os
 import requests
 import zipfile
 from io import BytesIO
 from dotenv import load_dotenv
 from RL.DQN.DQN import run_dqn
+from apis.EnergiData import RequestDetail
+import json
+
+from sqlalchemy.orm import Session, joinedload
+from models.models import UserEV
+from database.db import get_db
 
 load_dotenv()
 
 router = APIRouter()
 
-@router.get("/run_dqn")
-def run(): 
-    return run_dqn()
+@router.get("/schedule/{ev_id}")
+def run(ev_id: int, start_date, end_date, db: Session = Depends(get_db)): 
+    ev: UserEV = db.query(UserEV).options(
+        joinedload(UserEV.constraint),
+        joinedload(UserEV.schedule),
+        joinedload(UserEV.car_model)
+    ).get(ev_id)
 
-@router.post("/train")
-def dqn_start_train(branch_name="main"):
-    GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-    if not GITHUB_TOKEN:
-        raise ValueError("GITHUB_TOKEN environment variable is not set")
+    if ev is None:
+        raise HTTPException(status_code=404, detail=f"EV with id {ev_id} not found")
 
-    headers = {
-        "Authorization": f"token {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github+json"
+    car = {
+        'id': ev_id, 
+        'charge_percentage': min(ev.current_charge / ev.car_model.battery_capacity * 100, 100),
+        'min_percentage': ev.constraint.target_percentage * 100,
+        'charge': ev.current_charge,
+        'max_charge_kw': ev.car_model.battery_capacity,
+        'charge_speed': 22,
+        'constraints': {} #how to do from ev?????
+        # 'constraints': {"start": 15, "end": 17}
     }
 
-    data = {
-        "ref": branch_name,  #change to current branch
-        "inputs": {
-            "from": "fastapi",
-            "info": "Start Model Training"
-        }
-    }
-
-    url = "https://api.github.com/repos/P8-org/ev_charge_api/actions/workflows/ailab.yml/dispatches"
-    response = requests.post(url, headers=headers, json=data)
-
-    if response.status_code == 204:
-        print("✅ Workflow triggered successfully.")
-    else:
-        print(f"❌ Failed to trigger workflow: {response.status_code}")
-        print(response.text)
+    rd = RequestDetail(
+        startDate=start_date,
+        endDate=end_date,
+        dataset="Elspotprices",
+        sort_data="HourDK ASC",
+        filter_json=json.dumps({"PriceArea": ["DK1"]}),
+    )
+    # return car
+    return run_dqn(car=car,rd=rd)
 
 
 @router.get("/train_status")
