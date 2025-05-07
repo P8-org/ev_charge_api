@@ -42,7 +42,11 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     max_power = min(ev.max_charging_power, ev.car_model.max_charging_power)
 
     schedule = generate_schedule(num_hours, ev.current_charge, target_kwh, max_power, prices, False)
-    schedule = adjust_rl_schedule(schedule, target_kwh - ev.current_charge, max_power)
+    try:
+        schedule = adjust_rl_schedule(schedule, target_kwh - ev.current_charge, max_power)
+        ev.schedule.feasible = True
+    except:
+        ev.schedule.feasible = False
 
     schedule = [0 if abs(x) < 1e-4 else x for x in schedule] #round very small numbers to 0
 

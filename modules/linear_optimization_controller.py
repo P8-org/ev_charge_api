@@ -75,9 +75,7 @@ def adjust_rl_schedule(rl_action, E_required, P_max):
     prob.solve()
 
     if prob.status in ["infeasible","infeasible_inaccurate"]:
-        #TODO: implement infeasible problem handling
-        print("solution not feasible")
-        return rl_action;
+        raise Exception("infeasible")
 
 
     return x.value

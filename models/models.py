@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, DateTime, Integer, String, Float, ForeignKey, Enum
+from sqlalchemy import Column, DateTime, Integer, String, Float, ForeignKey, Enum, Boolean
 from sqlalchemy.orm import Session, Mapped, relationship
 import enum
 from typing import List
@@ -38,9 +38,10 @@ class Schedule(Base):
     end = Column(DateTime, nullable=False)
     num_hours = Column(Integer, nullable=False)
     start_charge = Column(Float, nullable=False)
-    schedule_data = Column(String)  # csv format, example: "20, 20, 0, 0, 0, 10" 
+    schedule_data = Column(String)  # json format, example: "[20, 20, 0, 0, 0, 10]"
     price = Column(Float, nullable=False)
     greedy_price = Column(Float, nullable=False)
+    feasible = Column(Boolean, nullable=False, default=True)
     ev_id = Column(Integer, ForeignKey("user_evs.id"), nullable=False)
     ev: Mapped["UserEV"] = relationship(back_populates="schedule")
 
@@ -69,6 +70,10 @@ class UserEV(Base):
     current_charging_power = Column(Float, nullable=False)
     max_charging_power = Column(Float, nullable=False)
     state = Column(Enum(State), nullable=False, default="idle")
+
+    # TODO måske slet måske ik
+    # active_schedule_id = Column(Integer, ForeignKey("schedules.id"), nullable=True)
+    # active_schedule: Mapped["Schedule"] = relationship("Schedule")
 
     car_model_id = Column(Integer, ForeignKey("car_models.id"), nullable=False)
     car_model: Mapped["CarModel"] = relationship("CarModel", back_populates="user_evs")
