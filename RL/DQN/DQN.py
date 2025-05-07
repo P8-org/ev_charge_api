@@ -154,7 +154,6 @@ class ElectricChargeEnv(gym.Env):
             self.done = True
 
         if self.car["started_at"] is not None and (self.car["charge_percentage"] >= 100 or self.done):
-            print(self.car)
             # Finalize the last charging session if still active
             if self.car["started_at"] is not None:
                 self.schedule.append({

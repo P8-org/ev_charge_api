@@ -7,8 +7,8 @@ import json
 #Only created since root folder should be in path(python is weird)
 
 cars = [
-    {'id': 0, 'charge_percentage': 0, 'min_percentage': 50, 'charge': 0, 'max_charge_kw': 80, 'charge_speed': 22, 'constraints': {}},
-    # {'id': 0, 'charge_percentage': 0, 'min_percentage': 80, 'charge': 0, 'max_charge_kw': 80, 'charge_speed': 22, 'constraints': {"start": 15, "end": 17}},
+    # {'id': 0, 'charge_percentage': 0, 'min_percentage': 50, 'charge': 0, 'max_charge_kw': 80, 'charge_speed': 22, 'constraints': {}},
+    {'id': 0, 'charge_percentage': 0, 'min_percentage': 80, 'charge': 0, 'max_charge_kw': 80, 'charge_speed': 22, 'constraints': {"start": 15, "end": 17}},
     # {'id': 0, 'charge_percentage': 0, 'min_percentage': 80, 'charge': 0, 'max_charge_kw': 80, 'charge_speed': 22, 'constraints': {"start": 14, "end": 17}},
     # {'id': 0, 'charge_percentage': 0, 'min_percentage': 80, 'charge': 0, 'max_charge_kw': 80, 'charge_speed': 22, 'constraints': {"start": 12, "end": 17}},
     # {'id': 0, 'charge_percentage': 0, 'min_percentage': 80, 'charge': 0, 'max_charge_kw': 80, 'charge_speed': 22, 'constraints': {"start": 7, "end": 17}},
