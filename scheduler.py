@@ -17,7 +17,12 @@ async def update_schedules():
         except: # if schedule is in the past, make_schedule throws an error
             pass 
 
-scheduler = BackgroundScheduler()
-trigger = CronTrigger(hour=13, minute=0)
-scheduler.add_job(lambda: asyncio.run(update_schedules()), trigger=trigger)
+async def pass_constraints():
+    print("Pass constraints")
+
+scheduler = BackgroundScheduler() #Import this to constraints.py and add correct job
+update_schedule_trigger = CronTrigger(hour=13, minute=0)
+pass_constraint_trigger = CronTrigger(hour=0, minute=0) #implement trigger for constraint start time
+scheduler.add_job(lambda: asyncio.run(update_schedule()), trigger=update_schedule_trigger)
+scheduler.add_job(lambda: asyncio.run(pass_constraints()), trigger=pass_constraints_trigger)
 scheduler.start()
