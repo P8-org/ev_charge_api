@@ -27,7 +27,7 @@ def simulate_charging(ev: UserEV):
         return
     now_hour = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
     hour_idx = round((now_hour - ev.schedule.start).total_seconds() // 3600) if ev.schedule.start else None
-    if hour_idx is not None and hour_idx >= 0 and hour_idx < ev.schedule.num_hours:
+    if hour_idx is not None and 0 <= hour_idx < ev.schedule.num_hours:
         ev.current_charging_power = schedule_data[hour_idx]
         if ev.current_charging_power != 0:
             ev.state = "charging"
@@ -51,14 +51,9 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
 
     ev.max_charging_power = ev.car_model.max_charging_power if ev_create.max_charging_power is None else ev_create.max_charging_power
 
-    constraint = Constraint()
-    constraint.charged_by = datetime.datetime.now() + datetime.timedelta(days=1)
-    constraint.target_percentage = 0.8
-
     schedule = Schedule()
 
 
-    ev.constraint = constraint
     ev.schedule = schedule
     db.add(ev)
     db.commit()
@@ -68,7 +63,7 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
 @router.get("/evs")
 async def get_evs(db: Session = Depends(get_db)):
     evs: list[UserEV] = db.query(UserEV).options(
-        joinedload(UserEV.constraint),
+        joinedload(UserEV.constraints),
         joinedload(UserEV.schedule),
         joinedload(UserEV.car_model)
     ).all()
@@ -78,7 +73,7 @@ async def get_evs(db: Session = Depends(get_db)):
 @router.get("/evs/{id}")
 async def get_ev_by_id(id: int, db: Session = Depends(get_db)):
     ev: UserEV = db.query(UserEV).options(
-        joinedload(UserEV.constraint),
+        joinedload(UserEV.constraints),
         joinedload(UserEV.schedule),
         joinedload(UserEV.car_model)
     ).get(id)
