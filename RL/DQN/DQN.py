@@ -93,8 +93,8 @@ class ElectricChargeEnv(gym.Env):
             return False
 
         # Urgency: Charge now if not enough hours are left to meet the charge goal
-        if hours_needed >= (end - self.t):
-            return True
+        # if hours_needed >= (end - self.t):
+        #     return True
 
         # Consider future prices within the allowed window
         future_prices = self.prices[self.t:end]
@@ -111,16 +111,20 @@ class ElectricChargeEnv(gym.Env):
 
     def step(self, action):
         # Charge the car if action is 1
+        reward = 0
         hours_left = self.total_time - self.t
         end_constraint = self.car['constraints'].get('end', self.total_time)
         time_until_end = end_constraint - self.t
-        time_left = time_until_end >= 0
 
-        # Fallback: Force charging if time is running out and charge is incomplete
-        if self.car["charge_percentage"] < 100 and time_left:
-            action = 1
+        # Encourage early and steady charging
+        if self.car["charge_percentage"] < 100 and time_until_end <= 1:
+            reward -= 20  # Penalize almost-out-of-time undercharging
+        elif action == 1 and self.car["charge_percentage"] >= 100:
+            reward -= 5   # Penalize overcharging
+        elif action == 1:
+            reward += 1   # Small reward for charging
 
-        if action == 1 and self.car["charge_percentage"] < 100 and self._should_charge_now(self.car, hours_left):
+        if self.car["charge_percentage"] < 100 and self._should_charge_now(self.car, hours_left):
             if self.car["started_at"] is None:
                 self.car["started_at"] = self.t
 
@@ -131,33 +135,26 @@ class ElectricChargeEnv(gym.Env):
             self.car["charge_kw"].append(self.car["charge_speed"])  # Log charging for this hour
         else:
             # Not charging this hour, fill in the gap if charging has started
-            if self.car["started_at"] is not None and time_left:
+            if self.car["started_at"] is not None and time_until_end > 0:
                 self.car["charge_kw"].append(0)
 
 
         # Calculate cost and reward
         cost = self.prices[self.t] * self.car["charge_speed"] if action == 1 else 0
-        price_sensitivity = 10.0
+        price_sensitivity = 1.0
         reward = -cost * price_sensitivity  # minimize cost
 
         # Check end condition
         if self.t + 1 >= self.total_time:
             self.done = True
-            # Finalize the last charging session if still active
-            if self.car["started_at"] is not None:
-                self.schedule.append({
-                    "start_time": self.car["started_at"],
-                    "charge": min(self.car["charge"], self.car['max_charge_kw']),
-                    "charge_percentage": self.car["charge_percentage"],
-                    "charge_kw": self.car["charge_kw"].copy()
-                })
-            self.car["started_at"] = None
-            self.car["charge_kw"] = []
 
             if self.car["charge_percentage"] < 100:
                 reward -= 100 * (100 - self.car["charge_percentage"])
         elif self.car["charge_percentage"] >= 100:
             self.done = True
+
+        if self.car["started_at"] is not None and (self.car["charge_percentage"] >= 100 or self.done):
+            print(self.car)
             # Finalize the last charging session if still active
             if self.car["started_at"] is not None:
                 self.schedule.append({
@@ -414,14 +411,8 @@ def run_dqn(car: dict, rd:RequestDetail):
         action = int(torch.argmax(q_values, dim=1).item())
         state, _, done, _, _ = env.step(action)
 
-    # Print the schedule
-    # print("Optimal Charging Schedule (per hour): ")
-    # for car in env.schedule:
-    #     hour_index = min(car['start_time'], len(times_48) - 1)  # prevent out of bounds
-    #     start_time = times_48[hour_index]
-    #     start_time_dt = start_time.astype('M8[s]').tolist()
-    #     start_time_str = start_time_dt.strftime("%Y-%m-%d %H:%M")
-    #     print(f"At {start_time_str} (Price: {prices_48[hour_index]:.2f}) -> Charged: {car['car_id']} (Hour {car['start_time']}) Charge Time: {car['duration']}")
-
     # print(env.schedule)    
+    # print(prices_48)
+    # prices_48.sort()
+    # print(prices_48[:4])
     return env.schedule
