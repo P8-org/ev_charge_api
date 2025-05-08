@@ -27,17 +27,6 @@ def run(ev_id: int, start_date, end_date, db: Session = Depends(get_db)):
     if ev is None:
         raise HTTPException(status_code=404, detail=f"EV with id {ev_id} not found")
 
-    car = {
-        'id': ev_id, 
-        'charge_percentage': min(ev.current_charge / ev.car_model.battery_capacity * 100, 100),
-        'min_percentage': ev.constraint.target_percentage * 100,
-        'charge': ev.current_charge,
-        'max_charge_kw': ev.car_model.battery_capacity,
-        'charge_speed': 22,
-        'constraints': {} #how to do from ev?????
-        # 'constraints': {"start": 15, "end": 17}
-    }
-
     rd = RequestDetail(
         startDate=start_date,
         endDate=end_date,
@@ -45,7 +34,23 @@ def run(ev_id: int, start_date, end_date, db: Session = Depends(get_db)):
         sort_data="HourDK ASC",
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
     )
-    # return car
+
+    car = {
+        'id': ev_id, 
+        'charge_percentage': min(ev.current_charge / ev.car_model.battery_capacity * 100, 100),
+        'min_percentage': ev.constraint.target_percentage * 100,
+        'charge': ev.current_charge,
+        'max_charge_kw': ev.car_model.battery_capacity,
+        'charge_speed': 22,
+        'constraints': {} #how to do from ev????? constraint is the index in period; if input is date, find the index 
+        # 'constraints': {"start": 15, "end": 17}
+    }
+
+    dqn_result = run_dqn(car=car,rd=rd)
+    if dqn_result == "No model trained":
+        dqn_download_artifact()
+        dqn_result = run_dqn(car=car,rd=rd)
+
     return run_dqn(car=car,rd=rd)
 
 

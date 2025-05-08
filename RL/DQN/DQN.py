@@ -264,8 +264,10 @@ class DQNAgent:
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             self.epsilon = checkpoint.get('epsilon', 1.0)
             print(f"[cyan]Model loaded from {path}[/cyan]")
+            return True
         else:
             print(f"[red]No model found at {path}[/red]")
+            return False
 
 
 # ------------------------------
@@ -397,21 +399,23 @@ def run_dqn(car: dict, rd:RequestDetail):
     action_dim = env.action_space.n
     agent = DQNAgent(state_dim, action_dim)
 
-    agent.load("dqn_model.pth")
+    if agent.load("dqn_model.pth"):
 
-    print("\n[bold underline]Testing Trained Agent[/bold underline]")
-    print(f"\n[Testing] starting at {times_48[0]}")
-    state, _ = env.reset()
-    done = False
-    while not done:
-        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.device)
-        with torch.no_grad():
-            q_values = agent.q_network(state_tensor)
-        action = int(torch.argmax(q_values, dim=1).item())
-        state, _, done, _, _ = env.step(action)
+        print("\n[bold underline]Testing Trained Agent[/bold underline]")
+        print(f"\n[Testing] starting at {times_48[0]}")
+        state, _ = env.reset()
+        done = False
+        while not done:
+            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.device)
+            with torch.no_grad():
+                q_values = agent.q_network(state_tensor)
+            action = int(torch.argmax(q_values, dim=1).item())
+            state, _, done, _, _ = env.step(action)
 
-    # print(env.schedule)    
-    # print(prices_48)
-    # prices_48.sort()
-    # print(prices_48[:4])
-    return env.schedule
+        # print(env.schedule)    
+        # print(prices_48)
+        # prices_48.sort()
+        # print(prices_48[:4])
+        return env.schedule
+    else:
+        return "No model trained"
