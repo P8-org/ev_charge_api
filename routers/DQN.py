@@ -4,7 +4,7 @@ import requests
 import zipfile
 from io import BytesIO
 from dotenv import load_dotenv
-from RL.DQN.DQN import run_dqn
+from RL.DQN import DQN_single, DQN_multi 
 from apis.EnergiData import RequestDetail
 import json
 
@@ -46,12 +46,13 @@ def run(ev_id: int, start_date, end_date, db: Session = Depends(get_db)):
         # 'constraints': {"start": 15, "end": 17}
     }
 
-    dqn_result = run_dqn(car=car,rd=rd)
+    dqn_result = DQN_single.run_dqn(car=car,rd=rd)
+    # dqn_result = DQN_multi.run_dqn(car=car,rd=rd) # need a different way to call
     if dqn_result == "No model trained":
         dqn_download_artifact()
-        dqn_result = run_dqn(car=car,rd=rd)
+        dqn_result = DQN_single.run_dqn(car=car,rd=rd)
 
-    return run_dqn(car=car,rd=rd)
+    return dqn_result
 
 
 @router.get("/train_status")
