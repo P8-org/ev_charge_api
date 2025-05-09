@@ -1,4 +1,4 @@
-name: AI-LAB train model
+name: AI-LAB train single model
 on:
   workflow_dispatch:
     inputs:
@@ -21,16 +21,18 @@ jobs:
         run: sbatch --output=training_output.txt RL/DQN/run.sh
       - name: Wait for model file to appear
         run: |
-          echo "Waiting for model file to be created: dqn_model.pth..."
-          file_path="/ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/dqn_model.pth"
+          echo "Waiting for model file to be created: single_dqn_model.pth or multi_dqn_model.pth..."
+
+          # single_model_path="/ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/single_dqn_model.pth"
+          multi_model_path="/ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/multi_dqn_model.pth"
           max_checks=10080  # Wait up to 7 days (10080 minutes)
           checks=0
 
-          while [ ! -f "$file_path" ]; do
+          while [ ! -f "$single_model_path" ] && [ ! -f "$multi_model_path" ]; do
             checks=$(expr $checks + 1)
 
             if [ "$checks" -ge "$max_checks" ]; then
-              echo "Timeout reached waiting for dqn_model.pth."
+              echo "Timeout reached waiting for single_dqn_model.pth or multi_dqn_model.pth."
               exit 1
             fi
 
@@ -43,16 +45,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: model
-          path: /ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/dqn_model.pth
-      - name: Archive train_progress (if not finished)
-        uses: actions/upload-artifact@v4
-        with:
-          name: model
-          path: /ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/train_progress
-      - name: Archive temp model (if not finished)
-        uses: actions/upload-artifact@v4
-        with:
-          name: model
-          path: /ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/dqn_model_temp.pth
+          path: |
+            # /ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/single_dqn_model.pth
+            /ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/multi_dqn_model.pth
       - name: Print Results
         run: echo /ceph/project/charge_buddy/actions-runner/_work/ev_charge_api/ev_charge_api/training_output.txt 
