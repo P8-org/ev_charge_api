@@ -107,6 +107,9 @@ async def delete_ev_by_id(id: int, db: Session = Depends(get_db)):
 
     if not ev:
         raise HTTPException(status_code=404, detail="EV not found")
+    
+    if ev.schedule:
+        db.delete(ev.schedule)
 
     db.delete(ev)
     db.commit()

@@ -34,7 +34,6 @@ class Schedule(Base):
     greedy_price = Column(Float, nullable=False)
     feasible = Column(Boolean, nullable=False)
     constraint_id = Column(Integer, ForeignKey("constraints.id"), nullable=False)
-    constraint: Mapped["Constraint"] = relationship("Constraint")
 
 
 class CarModel(Base):

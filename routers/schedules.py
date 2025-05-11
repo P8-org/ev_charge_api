@@ -61,7 +61,7 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     ev.schedule.start = datetime.datetime.fromisoformat(hour_dk[0])
     ev.schedule.end = ev.schedule.start + datetime.timedelta(hours=num_hours)
     ev.schedule.start_charge = ev.current_charge
-    ev.schedule.constraint = constraint
+    ev.schedule.constraint_id = constraint.id
 
     b = Benchmark(schedule_data,prices, target_kwh - ev.current_charge, max_power)
     ev.schedule.price = b.optimized_schedule_price()
