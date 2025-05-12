@@ -5,4 +5,4 @@ HOW TO RUN:
 - install rust RL lib:
     - install rust compiler: https://www.rust-lang.org/tools/install
     - run `maturin develop -m RL/rl/Cargo.toml --release`
-- to run server: `fastapi dev app.py`
+- to run server: `fastapi dev app.py` or `py app.py`

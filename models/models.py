@@ -1,8 +1,8 @@
 import datetime
-from sqlalchemy import Column, DateTime, Integer, String, Float, ForeignKey, Enum
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Float, ForeignKey, Enum
 from sqlalchemy.orm import Session, Mapped, relationship
 import enum
-
+from typing import List
 from database.base import Base
 
 
@@ -14,24 +14,16 @@ class State(enum.Enum):
 class Constraint(Base):
     __tablename__ = "constraints"
     id = Column(Integer, primary_key=True, index=True)
-    charged_by = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    start_time = Column(DateTime, nullable=False)
     target_percentage = Column(Float, nullable=False)
     ev_id = Column(Integer, ForeignKey("user_evs.id"), nullable=False)
-    ev: Mapped["UserEV"] = relationship(back_populates="constraint")
+    ev: Mapped["UserEV"] = relationship(back_populates="constraints")
 
 
 class Schedule(Base):
-    def __init__(self):
-        self.end = datetime.datetime.now()
-        self.start = datetime.datetime.now()
-        self.schedule_data = ""
-        self.num_hours = 0
-        self.start_charge = 0
-        self.price = 0
-        self.greedy_price = 0
-
-
     __tablename__ = "schedules"
+    
     id = Column(Integer, primary_key=True, index=True)
     start = Column(DateTime, nullable=False)
     end = Column(DateTime, nullable=False)
@@ -40,8 +32,8 @@ class Schedule(Base):
     schedule_data = Column(String)  # csv format, example: "20, 20, 0, 0, 0, 10" 
     price = Column(Float, nullable=False)
     greedy_price = Column(Float, nullable=False)
-    ev_id = Column(Integer, ForeignKey("user_evs.id"), nullable=False)
-    ev: Mapped["UserEV"] = relationship(back_populates="schedule")
+    feasible = Column(Boolean, nullable=False)
+    constraint_id = Column(Integer, ForeignKey("constraints.id"), nullable=False)
 
 
 class CarModel(Base):
@@ -57,7 +49,6 @@ class CarModel(Base):
     model_year = Column(Integer, nullable=False)
     battery_capacity = Column(Float, nullable=False)
     max_charging_power = Column(Float, nullable=False)
-    user_evs: Mapped[list["UserEV"]] = relationship("UserEV", back_populates="car_model")
 
 
 class UserEV(Base):
@@ -70,10 +61,39 @@ class UserEV(Base):
     state = Column(Enum(State), nullable=False, default="idle")
 
     car_model_id = Column(Integer, ForeignKey("car_models.id"), nullable=False)
-    car_model: Mapped["CarModel"] = relationship("CarModel", back_populates="user_evs")
-    constraint: Mapped["Constraint"] = relationship(
-        back_populates="ev", cascade="all, delete-orphan", uselist=False
+    car_model: Mapped["CarModel"] = relationship("CarModel")
+    constraints: Mapped[List["Constraint"]] = relationship(
+    back_populates="ev", cascade="all, delete-orphan", lazy="joined"
     )
-    schedule: Mapped["Schedule"] = relationship(
-        back_populates="ev", cascade="all, delete-orphan", uselist=False
-    )
+    schedule_id = Column(Integer, ForeignKey("schedules.id"), nullable=True)
+    schedule: Mapped["Schedule"] = relationship("Schedule")
+
+
+    def get_next_constraint(self) -> Constraint | None:
+        now = datetime.datetime.now()
+        return min(
+            (constraint for constraint in self.constraints if constraint.end_time > now),
+            key=lambda c: c.start_time,
+            default=None
+        )
+
+    def get_previous_constraint(self) -> Constraint | None:
+        now = datetime.datetime.now()
+        return max(
+            (constraint for constraint in self.constraints if constraint.end_time < now),
+            key=lambda c: c.end_time,
+            default=None
+        )
+
+    def should_generate_new_schedule(self) -> bool:
+        next_constraint = self.get_next_constraint()
+        if not next_constraint:
+            return False
+
+        if not self.schedule:
+            return True
+
+        if self.schedule.end < datetime.datetime.now():
+            return True
+            
+        return False
