@@ -105,7 +105,9 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        ws_manager.disconnect(websocket)
+        await ws_manager.disconnect(websocket)
+    finally:
+        await ws_manager.disconnect(websocket)
 
 if __name__ == "__main__":
     uvicorn.run(app="app:app", reload=True, host="0.0.0.0")
