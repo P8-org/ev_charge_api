@@ -413,9 +413,9 @@ def run_dqn(car: dict, rd:RequestDetail):
             state, _, done, _, _ = env.step(action)
 
         print(env.schedule)    
-        # print(prices_48)
-        # prices_48.sort()
-        # print(prices_48[:4])
+        print(prices_48)
+        prices_48.sort()
+        print(prices_48[:7])
         return env.schedule
     else:
         return "No model trained"

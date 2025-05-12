@@ -19,13 +19,14 @@ router = APIRouter()
 @router.get("/schedule/{ev_id}")
 def run(ev_id: int, start_date, end_date, db: Session = Depends(get_db)): 
     ev: UserEV = db.query(UserEV).options(
-        joinedload(UserEV.constraint),
+        joinedload(UserEV.constraints),
         joinedload(UserEV.schedule),
         joinedload(UserEV.car_model)
     ).get(ev_id)
 
     if ev is None:
         raise HTTPException(status_code=404, detail=f"EV with id {ev_id} not found")
+
 
     rd = RequestDetail(
         startDate=start_date,
@@ -35,14 +36,19 @@ def run(ev_id: int, start_date, end_date, db: Session = Depends(get_db)):
         filter_json=json.dumps({"PriceArea": ["DK1"]}),
     )
 
+
+    constraint = ev.get_next_constraint()
+    if not constraint:
+        raise HTTPException(status_code=400, detail="No upcoming constraints")
+    
     car = {
         'id': ev_id, 
         'charge_percentage': min(ev.current_charge / ev.car_model.battery_capacity * 100, 100),
-        'min_percentage': ev.constraint.target_percentage * 100,
+        'min_percentage': constraint.target_percentage * 100,
         'charge': ev.current_charge,
         'max_charge_kw': ev.car_model.battery_capacity,
-        'charge_speed': 22,
-        'constraints': {} #how to do from ev????? constraint is the index in period; if input is date, find the index 
+        'charge_speed': ev.max_charging_power,
+        'constraints': {"start": constraint.start_time.hour, "end": constraint.end_time.hour} #how to do from ev????? constraint is the index in period; if input is date, find the index 
         # 'constraints': {"start": 15, "end": 17}
     }
 
