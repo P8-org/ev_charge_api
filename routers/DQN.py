@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 import os
+import datetime
+from dateutil import parser
 import requests
 import zipfile
 from io import BytesIO
@@ -40,6 +42,11 @@ def run(ev_id: int, start_date, end_date, db: Session = Depends(get_db)):
     constraint = ev.get_next_constraint()
     if not constraint:
         raise HTTPException(status_code=400, detail="No upcoming constraints")
+
+    period_start = parser.parse(start_date)
+    constraint_start_idx = int((constraint.start_time - period_start).total_seconds() // 60 // 60)
+    constraint_end_idx = int((constraint.end_time - period_start).total_seconds() // 60 // 60)
+    
     
     car = {
         'id': ev_id, 
@@ -48,7 +55,7 @@ def run(ev_id: int, start_date, end_date, db: Session = Depends(get_db)):
         'charge': ev.current_charge,
         'max_charge_kw': ev.car_model.battery_capacity,
         'charge_speed': ev.max_charging_power,
-        'constraints': {"start": constraint.start_time.hour, "end": constraint.end_time.hour} #how to do from ev????? constraint is the index in period; if input is date, find the index 
+        'constraints': {"start": constraint_start_idx, "end": constraint_end_idx} #how to do from ev????? constraint is the index in period; if input is date, find the index 
         # 'constraints': {"start": 15, "end": 17}
     }
 
