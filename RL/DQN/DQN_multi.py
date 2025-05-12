@@ -42,14 +42,14 @@ class ElectricChargeEnv(gym.Env):
         self.reset()
 
     def _define_spaces(self, num_cars):
-        self.action_space = spaces.MultiBinary(num_cars)
-        
-        obs_dim = 3 + self.window_size + self.max_cars
+        # Each car's state includes: 3 time features + window_size prices + 1 remaining charge + 1 priority
+        obs_dim_per_car = 3 + self.window_size + 1 + 1  # Add 1 for the "priority" feature
         self.observation_space = spaces.Box(
             low=0, high=1,
-            shape=(obs_dim,),
+            shape=(num_cars, obs_dim_per_car),  # One state per car
             dtype=np.float32
         )
+        self.action_space = spaces.MultiBinary(num_cars)
 
     def reset(self, num_cars=None, num_chargers=None):
         if num_cars is not None:
@@ -67,6 +67,10 @@ class ElectricChargeEnv(gym.Env):
             car_copy["started_at"] = None
             car_copy["charge_kw"] = []
             car_copy["charge_percentage"] = min((car_copy["charge"] / car_copy["max_charge_kw"]) * 100, 100)
+            car_copy["state"] = {
+                "urgency": 0,  # Reset urgency
+                "priority": random.random()  # Random priority for demonstration
+            }
             self.cars.append(car_copy)
 
         self.schedule = []
@@ -82,18 +86,23 @@ class ElectricChargeEnv(gym.Env):
         padded_prices[-len(recent_prices):] = recent_prices / (self.max_price + 1e-6)
 
         norm_time = self.t / (self.total_time - 1)
-        
-        # Create padded remaining charge for cars (fixed size for max_cars)
-        norm_remaining = np.zeros(self.max_cars, dtype=np.float32)
-        for i, car in enumerate(self.cars):
-            if i < self.max_cars:
-                norm_remaining[i] = (car["max_charge_kw"] - car["charge"]) / car["max_charge_kw"]
-        
         current_time = self.times[self.t].astype('datetime64[s]').astype(object)
         hour_of_day = current_time.hour / 23.0
         day_of_week = current_time.weekday() / 6.0
 
-        return np.concatenate(([norm_time, hour_of_day, day_of_week], padded_prices, norm_remaining)).astype(np.float32)
+        # Create individual states for each car
+        car_states = []
+        for car in self.cars:
+            remaining_charge = (car["max_charge_kw"] - car["charge"]) / car["max_charge_kw"]
+            car_state = np.concatenate((
+                [norm_time, hour_of_day, day_of_week],
+                padded_prices,
+                [remaining_charge, car["state"]["priority"]]  # Include unique state attributes
+            )).astype(np.float32)
+            car_states.append(car_state)
+
+        # Return a list of states, one for each car
+        return car_states
 
     def _should_charge_now(self, car, hours_left):
         """
@@ -126,9 +135,13 @@ class ElectricChargeEnv(gym.Env):
 
         # Heuristic: Charge if current price is within the cheapest N hours
         N = min(hours_needed, len(future_prices))  # Number of hours we need to charge
-        cheapest_hours = np.partition(future_prices, N-1)[:N]  # Top N cheapest prices
+        cheapest_hours = np.partition(future_prices, N-1)[:N]
         current_price = self.prices[self.t]
 
+        if cheapest_hours.size == 0:
+            return False
+
+        current_price = self.prices[self.t]
         return current_price <= max(cheapest_hours)
 
     def step(self, actions):
@@ -137,98 +150,113 @@ class ElectricChargeEnv(gym.Env):
         end_constraint = [car['constraints'].get('end', self.total_time) for car in self.cars]
         time_until_end = [end - self.t for end in end_constraint]
 
-        # handling for cars with tight constraints
-        for i, car in enumerate(self.cars):
-            constraints = car['constraints']
-            start = constraints.get('start', 0)
-            end = constraints.get('end', self.total_time)
-            
-            if self.t >= start and self.t < end and car["charge_percentage"] < 100:
-                remaining_charge = car["max_charge_kw"] - car["charge"]
-                hours_needed = np.ceil(remaining_charge / car["charge_speed"])
-                time_left = end - self.t
-                
-                if hours_needed >= time_left and i < len(actions):
-                    actions[i] = 1  # Force charge
-
-        # calculate priority for each car
+        # Calculate priority and urgency for each car
         charging_priorities = []
         for i, car in enumerate(self.cars):
             if i < len(actions):
-                urgency = 1.0
-                if time_until_end[i] > 0:
 
-                    remaining_percentage = 100 - (car["charge"] / car["max_charge_kw"]) * 100
-                    urgency = remaining_percentage / max(time_until_end[i], 1)
-                
+                price_penalty = (self.prices[self.t] - np.min(self.prices)) / (self.max_price - np.min(self.prices) + 1e-6)
+                remaining_percentage = 100 - (car["charge"] / car["max_charge_kw"]) * 100
+                urgency = remaining_percentage / max(time_until_end[i], 1) if time_until_end[i] > 0 else 0
+                # urgency = (remaining_percentage / max(time_until_end[i], 1)) * (1 - price_penalty)
+                # urgency = 1
+
+                # Enforce hard constraints for start and end times
+                # if "start" in car["constraints"] and self.t < car["constraints"]["start"]:
+                #     urgency = 0
+                #     continue
+                # elif "end" in car["constraints"] and self.t >= car["constraints"]["end"]:
+                #     urgency = 0
+                #     continue
+
+                # Boost urgency for cars nearing their end constraint
+                if "end" in car["constraints"] and time_until_end[i] <= 5 and car['charge_percentage'] < car['min_percentage']:
+                    urgency = 10 - time_until_end[i]
+
+                car["state"]["urgency"] = urgency
                 charging_priorities.append((i, urgency, actions[i]))
-        
-        # sort cars by urgency
+
+        # Sort cars by action (1 = wants to charge) and urgency
         charging_priorities.sort(key=lambda x: (x[2], x[1]), reverse=True)
-        
+
         active_chargers = 0
-        charged_cars = set()
-        
+
         for priority_item in charging_priorities:
             i = priority_item[0]
             car = self.cars[i]
-            
+
             car["charge_percentage"] = (car["charge"] / car["max_charge_kw"]) * 100
-            
-            car_wants_to_charge = (actions[i] == 1 and 
-                                  car["charge_percentage"] < 100 and 
-                                  time_until_end[i] > 0)
-            
+            car_wants_to_charge = (
+                actions[i] == 1 and 
+                car["charge_percentage"] < 100 and 
+                time_until_end[i] > 0 and 
+                (self.t >= car["constraints"].get("start", 0)) and 
+                (self.t < car["constraints"].get("end", self.total_time) and
+                self._should_charge_now(car,hours_left))
+            )
             can_charge = active_chargers < self.num_chargers
-            
+
             if car_wants_to_charge and can_charge:
-                charged_cars.add(i)
-                
                 if car["started_at"] is None:
                     car["started_at"] = self.t
-                
+
                 car["charge"] += car["charge_speed"]
                 car["charge_percentage"] = min((car["charge"] / car["max_charge_kw"]) * 100, 100)
                 car["charge_kw"].append(car["charge_speed"])
-                
-                # Count this car as using a charger
                 active_chargers += 1
-                
-                # Give positive reward for charging progress - higher as deadline approaches
+
+                # Reward for charging progress based only on price
                 progress_reward = car["charge_percentage"] / 50
-                urgency_multiplier = 1 + (1 / max(time_until_end[i], 1))
-                reward += progress_reward * urgency_multiplier
+                price_penalty = (self.prices[self.t] - np.min(self.prices)) / (self.max_price - np.min(self.prices) + 1e-6)
+                low_cost_multiplier = max((1 - price_penalty) ** 2, 0.1)
+
+                # Adjust reward to prioritize low-cost hours
+                # reward += (progress_reward * low_cost_multiplier)
+                reward += (progress_reward * low_cost_multiplier) - (price_penalty * 2)
             else:
-                # Not charging this hour, fill in the gap if charging has started
                 if car["started_at"] is not None and time_until_end[i] > 0:
                     car["charge_kw"].append(0)
-                
-                # punish not charging when needed
-                if time_until_end[i] <= 5 and car["charge_percentage"] < 90:
-                    urgency_penalty = (100 - car["charge_percentage"]) / 10
-                    reward -= urgency_penalty
 
+                # # Penalty for not charging when needed
+                # if time_until_end[i] <= 5 and car["charge_percentage"] < car["min_percentage"]:
+                #     urgency_penalty = ((100 - car["charge_percentage"]) / 5) * 0.1
+                #     reward -= urgency_penalty
 
-        # calculate cost
-        cost = sum([self.prices[self.t] * car["charge_speed"] if i < len(actions) and actions[i] > 0 and 
-                    car["charge_percentage"] < 100 and time_until_end[i] > 0 and i < active_chargers else 0 
-                    for i, car in enumerate(self.cars)])
-        
-        price_sensitivity = 1.0
-        reward -= cost * price_sensitivity
+        # Calculate cost
+        # cost = sum([
+        #     self.prices[self.t] * car["charge_speed"]
+        #     if i < len(actions) and actions[i] > 0 and car["charge_percentage"] < 100 and time_until_end[i] > 0
+        #     else 0
+        #     for i, car in enumerate(self.cars)
+        # ])
+        # reward -= cost
 
         # Check end condition
         if self.t + 1 >= self.total_time:
             self.done = True
             for car in self.cars:
                 if car["charge_percentage"] < car['min_percentage']:
-                    reward -= 20 * (100 - car["charge_percentage"])
+                    reward -= 10 * (100 - car["charge_percentage"])
+                    # print(car)
                 if car["charge_percentage"] < 100:
-                    reward -= 5 * (100 - car["charge_percentage"])
-        
-        # Check if any cars need to finalize their charging sessions
+                    reward -= 2 * (100 - car["charge_percentage"])
+
+        # Finalize charging sessions
         for car in self.cars:
             if car["started_at"] is not None and (car["charge_percentage"] >= 100 or self.done):
+                self.schedule.append({
+                    "id": car["id"],
+                    "start_time": car["started_at"],
+                    "charge": min(car["charge"], car['max_charge_kw']),
+                    "charge_percentage": car["charge_percentage"],
+                    "charge_kw": car["charge_kw"].copy()
+                })
+                car["started_at"] = None
+                car["charge_kw"] = []
+
+        # Ensure all cars are added to the schedule when the environment ends
+        if self.done:
+            for car in self.cars:
                 if car["started_at"] is not None:
                     self.schedule.append({
                         "id": car["id"],
@@ -237,8 +265,8 @@ class ElectricChargeEnv(gym.Env):
                         "charge_percentage": car["charge_percentage"],
                         "charge_kw": car["charge_kw"].copy()
                     })
-                car["started_at"] = None
-                car["charge_kw"] = []
+                    car["started_at"] = None
+                    car["charge_kw"] = []
 
         self.t = min(self.t + 1, self.total_time - 1)
 
@@ -265,13 +293,20 @@ class QNetwork(nn.Module):
         )
     
     def forward(self, x):
-        return self.net(x)
+        # Ensure input has 3 dimensions: (batch_size, num_cars, input_dim)
+        if len(x.size()) == 2:  # Handle single car case
+            x = x.unsqueeze(1)
+        batch_size, num_cars, input_dim = x.size()
+        x = x.view(batch_size * num_cars, input_dim)  # Flatten cars into batch
+        x = self.net(x)
+        return x.view(batch_size, num_cars, -1)  # Reshape back to (batch_size, num_cars, output_dim)
 
 # ------------------------------
 # DQN Agent and Training Setup
 # ------------------------------
 class DQNAgent:
-    def __init__(self, state_dim, action_dim, max_cars, lr=1e-3, gamma=0.99, epsilon_start=1.0, epsilon_end=0.1, epsilon_decay=0.995):
+    def __init__(self, state_dim, action_dim, max_cars, lr=1e-4, gamma=0.99, epsilon_start=1.0, epsilon_end=0.1, epsilon_decay=0.995):
+        # Ensure state_dim matches the updated observation space dimensions
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.q_network = QNetwork(state_dim, action_dim).to(self.device)
         self.target_network = QNetwork(state_dim, action_dim).to(self.device)
@@ -283,6 +318,7 @@ class DQNAgent:
         self.epsilon = epsilon_start
         self.epsilon_end = epsilon_end
         self.epsilon_decay = epsilon_decay
+        self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
 
         self.replay_buffer = deque(maxlen=10000)
         self.batch_size = 64
@@ -292,10 +328,11 @@ class DQNAgent:
         if np.random.rand() < self.epsilon:
             return np.random.randint(2)
         else:
-            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+            # Ensure state tensor has the correct dimensions (batch_size, num_cars, input_dim)
+            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)  # Add batch dimension
             with torch.no_grad():
                 q_values = self.q_network(state_tensor)
-                return int(torch.argmax(q_values).item())
+                return int(torch.argmax(q_values[0]).item())
 
     def update(self):
         if len(self.replay_buffer) < self.batch_size:
@@ -304,15 +341,21 @@ class DQNAgent:
         batch = random.sample(self.replay_buffer, self.batch_size)
         states, actions, rewards, next_states, dones = zip(*batch)
 
+        # Ensure states and next_states have the correct dimensions
         states = torch.FloatTensor(np.array(states)).to(self.device)
+        if len(states.size()) == 3:  # Handle single car case
+            states = states.unsqueeze(1)
+        next_states = torch.FloatTensor(np.array(next_states)).to(self.device)
+        if len(next_states.size()) == 3:  # Handle single car case
+            next_states = next_states.unsqueeze(1)
+
         actions = torch.LongTensor(actions).unsqueeze(1).to(self.device)
         rewards = torch.FloatTensor(rewards).unsqueeze(1).to(self.device)
-        next_states = torch.FloatTensor(np.array(next_states)).to(self.device)
         dones = torch.FloatTensor(dones).unsqueeze(1).to(self.device)
 
-        q_values = self.q_network(states).gather(1, actions)
+        q_values = self.q_network(states).gather(2, actions.unsqueeze(-1)).squeeze(-1)
         with torch.no_grad():
-            next_q_values = self.target_network(next_states).max(1, keepdim=True)[0]
+            next_q_values = self.target_network(next_states).max(2)[0]
         target = rewards + self.gamma * next_q_values * (1 - dones)
         loss = torch.nn.MSELoss()(q_values, target)
         
@@ -352,22 +395,22 @@ class DQNAgent:
 def train_agent(env, agent, num_episodes=500, print_iter=False):
     update_target_every = 10  # update target network every 10 episodes
     for episode in range(num_episodes):
-        state, _ = env.reset(env.num_cars, env.num_chargers)
+        states, _ = env.reset(env.num_cars, env.num_chargers)
         total_reward = 0
         done = False
 
         while not done:
-            # Process each car individually
-            action = np.zeros(env.max_cars, dtype=np.int32)
-            for i in range(env.num_cars):
-                action[i] = agent.select_action(state)
+            actions = np.zeros(env.max_cars, dtype=np.int32)
+            for i, state in enumerate(states[:env.num_cars]):
+                actions[i] = agent.select_action(state)
                 
-            next_state, reward, done, _, _ = env.step(action)
+            next_states, reward, done, _, _ = env.step(actions)
             total_reward += reward
 
-            agent.replay_buffer.append((state, action[0], reward, next_state, float(done)))
-            state = next_state
+            for i, state in enumerate(states[:env.num_cars]):
+                agent.replay_buffer.append((state, actions[i], reward, next_states[i], float(done)))
 
+            states = next_states
             agent.update()
         
         agent.epsilon = max(agent.epsilon_end, agent.epsilon * agent.epsilon_decay)
@@ -440,7 +483,9 @@ def train_dqn(cars: list[dict], rd: RequestDetail, num_chargers: int = None, num
 
             print(f"\n[Training] Period {i+1}/{len(train_periods)} starting at {times_48[0]}")
             env = ElectricChargeEnv(prices_48, times_48, cars, num_chargers=num_chargers)
-            state_dim = env.observation_space.shape[0]
+            
+            # Correctly calculate state_dim based on observation space
+            state_dim = env.observation_space.shape[1]  # Use the second dimension of the observation space
             action_dim = env.action_space.n
 
             if agent is None:
@@ -473,7 +518,9 @@ def run_dqn(cars: list[dict], rd: RequestDetail, num_chargers: int = None):
     times_48 = times_np[0:]
 
     env = ElectricChargeEnv(prices_48, times_48, cars, num_chargers=num_chargers)
-    state_dim = env.observation_space.shape[0]
+    
+    # Correctly calculate state_dim based on observation space
+    state_dim = env.observation_space.shape[1]  # Use the second dimension of the observation space
     action_dim = env.action_space.n
     agent = DQNAgent(state_dim, action_dim, env.max_cars)
     
@@ -482,28 +529,25 @@ def run_dqn(cars: list[dict], rd: RequestDetail, num_chargers: int = None):
     if model_loaded:
         print("\n[bold underline]Testing Trained Agent[/bold underline]")
         print(f"\n[Testing] starting at {times_48[0]}")
-        state, _ = env.reset(num_cars=len(cars), num_chargers=num_chargers)
+        states, _ = env.reset(num_cars=len(cars), num_chargers=num_chargers)
         done = False
 
         while not done:
-            # Create actions array with fixed size
-            action = np.zeros(env.max_cars, dtype=np.int32)
-            
-            # Process each car individually
-            for i in range(min(len(cars), env.max_cars)):
-                # Get state
+            actions = np.zeros(env.max_cars, dtype=np.int32)
+            for i, state in enumerate(states[:env.num_cars]):
                 state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.device)
                 with torch.no_grad():
                     q_values = agent.q_network(state_tensor)
-                    action[i] = int(torch.argmax(q_values[0]).item())
+                    actions[i] = int(torch.argmax(q_values[0]).item())
             
             print(f"Step {env.t}/{len(times_48)}", end="\r")
-            
-            state, _, done, _, _ = env.step(action)
+            states, _, done, _, _ = env.step(actions)
 
         if env.schedule:
-            print(f"Schedule created with {len(env.schedule)} entries")
+            print(f"Schedule created with {len(env.schedule)} entries and {num_chargers} chargers")
             print(env.schedule)
+            print(prices_48)
+            print(sorted(prices_48)[:5])
             return env.schedule
         else:
             print("[red]No schedule was generated[/red]")

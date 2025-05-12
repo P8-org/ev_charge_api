@@ -412,7 +412,7 @@ def run_dqn(car: dict, rd:RequestDetail):
             action = int(torch.argmax(q_values, dim=1).item())
             state, _, done, _, _ = env.step(action)
 
-        # print(env.schedule)    
+        print(env.schedule)    
         # print(prices_48)
         # prices_48.sort()
         # print(prices_48[:4])
