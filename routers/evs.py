@@ -66,8 +66,9 @@ async def create_ev(ev_create: EvCreate, db: Session = Depends(get_db)):
 
     ev.car_model = db.query(CarModel).get(ev_create.car_model_id)
 
-    ev.max_charging_power = ev.car_model.max_charging_power if ev_create.max_charging_power is None else ev_create.max_charging_power
-
+    # ev.max_charging_power = ev.car_model.max_charging_power if ev_create.max_charging_power is None else ev_create.max_charging_power
+    ev.max_charging_power = 11
+    
     db.add(ev)
     db.commit()
     db.refresh(ev)
