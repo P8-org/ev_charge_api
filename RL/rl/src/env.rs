@@ -21,17 +21,21 @@ pub struct Env {
     pub prices: Vec<f64>,
     pub num_hours: usize,
     current_hour: usize,
+    first_hour_mult: f64,
+    last_hour_mult: f64,
     battery_cap_cache: Option<f64>,
 }
 
 impl Env {
-    pub fn new(evs: Vec<EV>, charger: Charger, prices: Vec<f64>, num_hours: usize) -> Self {
+    pub fn new(evs: Vec<EV>, charger: Charger, prices: Vec<f64>, num_hours: usize, first_hour_mult: f64, last_hour_mult: f64) -> Self {
         Env {
             evs,
             charger,
             prices,
             num_hours: num_hours,
             current_hour: 0,
+            first_hour_mult: first_hour_mult,
+            last_hour_mult: last_hour_mult,
             battery_cap_cache: None
         }
     }    
@@ -45,7 +49,17 @@ impl Env {
     
         if let Some(ev_idx) = self.charger.connected_ev {
             let ev = &mut self.evs[ev_idx];
-            rate = ev.max_charging_rate.min(self.charger.max_charging_rate).min(ev.battery_capacity - ev.battery_level);
+            let multiplier = if self.current_hour == 0 && self.current_hour == self.num_hours - 1 {
+                self.first_hour_mult - (1.0 - self.last_hour_mult)
+            }
+            else if self.current_hour == 0 {
+                self.first_hour_mult
+            } else if self.current_hour == self.num_hours - 1 {
+                self.last_hour_mult
+            } else {
+                1.0
+            };
+            rate = ev.max_charging_rate.min(self.charger.max_charging_rate).min(ev.battery_capacity - ev.battery_level) * multiplier;
             ev.step(1, rate);
             let price = self.prices[self.current_hour];
             let mut reward = 0.0;

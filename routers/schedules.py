@@ -1,6 +1,7 @@
 import datetime
 import json
 import math
+import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from apis.EnergiData import EnergiData, RequestDetail
@@ -30,15 +31,15 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     if constraint is None:
         raise HTTPException(status_code=400, detail=f"EV with id {ev_id} has no upcoming constraints")
 
-    duration: datetime.timedelta = constraint.end_time.replace(second=0, microsecond=0, minute=0) - constraint.start_time
-    num_hours = math.floor(duration.total_seconds() / 60 / 60)
+    duration: datetime.timedelta = constraint.end_time - constraint.start_time.replace(second=0, microsecond=0, minute=0)
+    num_hours = math.ceil(duration.total_seconds() / 60 / 60)
     if num_hours <= 0: raise HTTPException(status_code=400, detail="Charging duration is negative")
     target_kwh = constraint.target_percentage * ev.car_model.battery_capacity
     e = EnergiData()
-    formatted_time = constraint.start_time.strftime("%Y-%m-%dT%H:%M")
+    formatted_time = (constraint.start_time - datetime.timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M")
     rd = RequestDetail(startDate=formatted_time, dataset="Elspotprices", filter_json=json.dumps({"PriceArea": ["DK1"]}), sort_data="HourDK ASC")
     response = e.call_api(rd)
-    while datetime.datetime.fromisoformat(response[0].HourDK) < constraint.start_time:
+    while datetime.datetime.fromisoformat(response[0].HourDK).hour < constraint.start_time.hour:
         response.pop(0)
 
     hour_dk = [record.HourDK for record in response]
@@ -46,8 +47,9 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
 
     max_power = min(ev.max_charging_power, ev.car_model.max_charging_power)
 
-    schedule_data = generate_schedule(num_hours, ev.current_charge, target_kwh, max_power, prices, False)
-    schedule_data = adjust_rl_schedule(schedule_data, target_kwh - ev.current_charge, max_power)
+
+    schedule_data = generate_schedule(num_hours, ev.current_charge, target_kwh, max_power, prices, constraint.start_time.minute, constraint.end_time.minute, False)
+    #schedule_data = adjust_rl_schedule(schedule_data, target_kwh - ev.current_charge, max_power)
 
     schedule_data = [0 if abs(x) < 1e-4 else x for x in schedule_data] #round very small numbers to 0
 
@@ -58,8 +60,8 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     ev.schedule.feasible = ev.current_charge + sum(schedule_data) >= target_kwh
     ev.schedule.num_hours = len(schedule_data)
     ev.schedule.schedule_data = ", ".join(map(str, schedule_data))
-    ev.schedule.start = datetime.datetime.fromisoformat(hour_dk[0])
-    ev.schedule.end = ev.schedule.start + datetime.timedelta(hours=num_hours)
+    ev.schedule.start = constraint.start_time
+    ev.schedule.end = constraint.end_time
     ev.schedule.start_charge = ev.current_charge
     ev.schedule.constraint_id = constraint.id
 

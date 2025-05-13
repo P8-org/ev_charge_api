@@ -20,9 +20,9 @@ fn rl_scheduling(m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 #[pyfunction]
-fn get_schedule(num_hours: usize, alpha: f64, epsilon: f64, episodes: usize, bat_lvl: f64, bat_cap: f64, max_charging_rate: f64, prices: Vec<f64>, print: bool) -> PyResult<Vec<f64>> {
+fn get_schedule(num_hours: usize, alpha: f64, epsilon: f64, episodes: usize, bat_lvl: f64, bat_cap: f64, max_charging_rate: f64, prices: Vec<f64>, first_hour_mult: f64, last_hour_mult: f64, print: bool) -> PyResult<Vec<f64>> {
     let ev = EV::new(bat_cap, max_charging_rate, bat_lvl);
-    let mut env = Env::new(vec![ev], Charger::new(max_charging_rate), prices, num_hours);
+    let mut env = Env::new(vec![ev], Charger::new(max_charging_rate), prices, num_hours, first_hour_mult, last_hour_mult);
 
     let mut q_table = QTable::with_hasher(FxBuildHasher::default());
 

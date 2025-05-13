@@ -44,6 +44,7 @@ def seed_db():
             CarModel(model_name="Renault Megane E-Tech", model_year=2024, battery_capacity=60.0, max_charging_power=130.0),
             CarModel(model_name="Fiat 500e", model_year=2024, battery_capacity=42.0, max_charging_power=85.0),
             CarModel(model_name="Kia Niro EV", model_year=2024, battery_capacity=64.8, max_charging_power=100.0),
+            CarModel(model_name="Test", model_year=2025, battery_capacity=100, max_charging_power=10),
         ]
         db.add_all(models)
         db.commit()
