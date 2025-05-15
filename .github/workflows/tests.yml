@@ -30,8 +30,8 @@ jobs:
         args: --release --out dist
 
     - name: Install rust lib
-        run: |
-          pip install rl_scheduling --no-index --find-links dist --force-reinstall
+      run: |
+        pip install rl_scheduling --no-index --find-links dist --force-reinstall
 
     - name: Install dependencies
       run: |
