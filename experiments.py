@@ -14,7 +14,7 @@ def is_weekday(datetime: datetime.datetime) -> bool:
     return datetime.weekday() < 5
 
 
-def simulate(car: UserEV, target_percentage: float, prices: list[float]) -> tuple[float, float]:
+def simulate(car: UserEV, target_percentage: float, prices: list[float]) -> list[float]:
     target_kwh = target_percentage * car.car_model.battery_capacity
     schedule_data = generate_schedule(num_hours=len(prices), initial_soc=car.current_charge, battery_capacity=target_kwh, max_chargin_rate=car.max_charging_power, prices=prices)
     schedule_data = adjust_rl_schedule(schedule_data, target_kwh - car.current_charge, car.max_charging_power)
