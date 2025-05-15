@@ -59,7 +59,7 @@ impl Env {
             } else {
                 1.0
             };
-            rate = ev.max_charging_rate.min(self.charger.max_charging_rate).min(ev.battery_capacity - ev.battery_level) * multiplier;
+            rate = (ev.max_charging_rate.min(self.charger.max_charging_rate) * multiplier).min(ev.battery_capacity - ev.battery_level);
             ev.step(1, rate);
             let price = self.prices[self.current_hour];
             let mut reward = 0.0;
