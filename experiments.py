@@ -21,6 +21,31 @@ def simulate(car: UserEV, target_percentage: float, prices: list[float]) -> tupl
     
     return schedule_data
 
+def get_co2_data(start_date, end_date) -> list[float]:
+    rd = RequestDetail(
+        startDate=start_date,
+        endDate=end_date,
+        dataset="CO2EmisProg",
+        sort_data="Minutes5DK%20ASC",
+        filter_json=json.dumps({"PriceArea": ["DK1"]}),
+        limit=0
+    )
+    base_url = "https://api.energidataservice.dk/dataset/"
+    request_string = e.process_request(rd)
+    co2_data = requests.get(base_url+request_string).json()
+
+    hourly_co2_data = defaultdict(list)
+
+    for record in co2_data["records"]:
+        # Extract the timestamp and CO2 emission value
+        timestamp = datetime.datetime.fromisoformat(record['Minutes5DK'])
+        hour_key = timestamp.replace(minute=0, second=0, microsecond=0)  # Round to the hour
+        hourly_co2_data[hour_key].append(record['CO2Emission'])
+
+    sorted_hourly_co2_data = dict(sorted(hourly_co2_data.items()))
+
+    hourly_co2_avg = [sum(values) / len(values) for hour, values in sorted_hourly_co2_data.items()]
+    return hourly_co2_avg
 
 car = UserEV()
 car.max_charging_power = 11
@@ -29,9 +54,7 @@ start_date = "2024-05-12T00:00"
 end_date = "2025-05-13T00:00"
 
 
-
 e = EnergiData()
-
 rd = RequestDetail(
     startDate=start_date,
     endDate=end_date,
@@ -40,37 +63,13 @@ rd = RequestDetail(
     filter_json=json.dumps({"PriceArea": ["DK1"]}),
     limit=0
 )
-
-rd2 = RequestDetail(
-    startDate=start_date,
-    endDate=end_date,
-    dataset="CO2EmisProg",
-    sort_data="Minutes5DK%20ASC",
-    filter_json=json.dumps({"PriceArea": ["DK1"]}),
-    limit=0
-)
-
-base_url = "https://api.energidataservice.dk/dataset/"
-request_string = e.process_request(rd2)
-co2_data = requests.get(base_url+request_string).json()
-
-hourly_co2_data = defaultdict(list)
-
-for record in co2_data["records"]:
-    # Extract the timestamp and CO2 emission value
-    timestamp = datetime.datetime.fromisoformat(record['Minutes5DK'])
-    hour_key = timestamp.replace(minute=0, second=0, microsecond=0)  # Round to the hour
-    hourly_co2_data[hour_key].append(record['CO2Emission'])
-
-sorted_hourly_co2_data = dict(sorted(hourly_co2_data.items()))
-
-hourly_co2_avg = [sum(values) / len(values) for hour, values in sorted_hourly_co2_data.items()]
-print(len(hourly_co2_avg) / 24)
-
 data = e.call_api(rd)
 
+
+co2_data = get_co2_data(start_date, end_date)
+
+
 days = int(len(data) / 24)
-print(days)
 
 optimal_price = 0
 greedy_price = 0
@@ -80,8 +79,9 @@ greedy_co2 = 0
 
 random.seed(0)
 
+
 for day in range(days-1):
-    print(day)
+    print(f"\rDay {day}", end="", flush=True)
     start_idx = day * 24
     weekday: bool = is_weekday(datetime.datetime.fromisoformat(data[start_idx].HourDK))
 
@@ -89,12 +89,16 @@ for day in range(days-1):
         car.current_charge = 65
         leave_hour = 8
         home_hour = 17
+
         slice_start = start_idx + home_hour
         slice_end = start_idx + 24 + leave_hour
         day_data = data[slice_start:slice_end]
         prices = [record.SpotPriceDKK / 1000 for record in day_data]
+
         schedule_data = simulate(car=car, target_percentage=0.8, prices=prices)
+
         target_kwh = 0.8 * car.car_model.battery_capacity
+
         b = Benchmark(schedule_data, prices, target_kwh - car.current_charge, car.max_charging_power)
         greedy_price += b.greedy_schedule_price()
         optimal_price += b.optimized_schedule_price()
@@ -103,7 +107,7 @@ for day in range(days-1):
             charge = schedule_data[i]
             if charge < 0.1: 
                 continue
-            optimal_co2 += hourly_co2_avg[slice_start + i] * charge
+            optimal_co2 += co2_data[slice_start + i] * charge
 
         schedule_data = sorted(schedule_data, reverse=True)
 
@@ -111,7 +115,7 @@ for day in range(days-1):
             charge = schedule_data[i]
             if charge < 0.1: 
                 continue
-            greedy_co2 += hourly_co2_avg[slice_start + i] * charge
+            greedy_co2 += co2_data[slice_start + i] * charge
 
 
     else: # dont commute if weekend
@@ -120,12 +124,16 @@ for day in range(days-1):
                 car.current_charge = 40
                 leave_hour = 8
                 home_hour = 18
+
                 slice_start = start_idx + home_hour
                 slice_end = start_idx + 24 + leave_hour
                 day_data = data[slice_start:slice_end]
                 prices = [record.SpotPriceDKK / 1000 for record in day_data]
+
                 schedule_data = simulate(car=car, target_percentage=0.8, prices=prices)
+
                 target_kwh = 0.8 * car.car_model.battery_capacity
+
                 b = Benchmark(schedule_data, prices, target_kwh - car.current_charge, car.max_charging_power)
                 greedy_price += b.greedy_schedule_price()
                 optimal_price += b.optimized_schedule_price()
@@ -134,7 +142,7 @@ for day in range(days-1):
                     charge = schedule_data[i]
                     if charge < 0.1: 
                         continue
-                    optimal_co2 += hourly_co2_avg[slice_start + i] * charge
+                    optimal_co2 += co2_data[slice_start + i] * charge
 
                 schedule_data = sorted(schedule_data, reverse=True)
 
@@ -142,16 +150,16 @@ for day in range(days-1):
                     charge = schedule_data[i]
                     if charge < 0.1: 
                         continue
-                    greedy_co2 += hourly_co2_avg[slice_start + i] * charge
+                    greedy_co2 += co2_data[slice_start + i] * charge
 
 
-        
-print(f"greedy price: {greedy_price} kr")
-print(f"optimal price: {optimal_price} kr")
+print("\n")
+print(f"greedy price: {round(greedy_price)} kr")
+print(f"optimal price: {round(optimal_price)} kr")
 print(f"savings: {round((greedy_price - optimal_price) / greedy_price * 100)}%")
 
 print("\n")
 
-print(f"greedy co2: {greedy_co2} g")
-print(f"optimal co2: {optimal_co2} g")
+print(f"greedy co2: {round(greedy_co2 / 1000)} kg")
+print(f"optimal co2: {round(optimal_co2 / 1000)} kg")
 print(f"savings: {round((greedy_co2 - optimal_co2) / greedy_co2 * 100)}%")
