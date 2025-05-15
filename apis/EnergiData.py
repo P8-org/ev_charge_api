@@ -40,7 +40,7 @@ class EnergiData:
 
     # data: list[EnergiDataInstance]
 
-    def __process_request(self, rd: RequestDetail):
+    def process_request(self, rd: RequestDetail):
 
         request_string = f'{rd.dataset}?start={rd.startDate}'
 
@@ -74,7 +74,7 @@ class EnergiData:
 
     def call_api(self, rd: RequestDetail) -> list[EnergiDataInstance]:
         base_url = "https://api.energidataservice.dk/dataset/"
-        request_string = self.__process_request(rd)
+        request_string = self.process_request(rd)
 
         r = requests.get(base_url+request_string)
 
@@ -86,7 +86,7 @@ class EnergiData:
         rd.startDate = "StartOfDay"
         rd.endDate = ""
 
-        request_string = self.__process_request(rd)
+        request_string = self.process_request(rd)
 
         r = requests.get(base_url+request_string)
 
@@ -98,7 +98,7 @@ class EnergiData:
         rd.startDate = "StartOfMonth"
         rd.endDate = ""
 
-        request_string = self.__process_request(rd)
+        request_string = self.process_request(rd)
 
         r = requests.get(base_url+request_string)
         print(base_url+request_string)
@@ -110,7 +110,7 @@ class EnergiData:
         rd.startDate = "StartOfYear"
         rd.endDate = ""
 
-        request_string = self.__process_request(rd)
+        request_string = self.process_request(rd)
 
         r = requests.get(base_url+request_string)
 
