@@ -16,7 +16,7 @@ from models.models import Constraint, Schedule, UserEV
 router = APIRouter()
 
 @router.post("/evs/{ev_id}/schedules/generate")
-async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
+def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     ev: UserEV = db.query(UserEV).options(
         joinedload(UserEV.constraints),
         joinedload(UserEV.schedule),
@@ -68,6 +68,9 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
     b = Benchmark(schedule_data,prices, target_kwh - ev.current_charge, max_power)
     ev.schedule.price = b.optimized_schedule_price()
     ev.schedule.greedy_price = b.greedy_schedule_price()
+
+    from scheduler import schedule_next
+    schedule_next(ev.id, ev.schedule.end)
 
     db.commit()
 

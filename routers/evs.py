@@ -1,4 +1,5 @@
 import datetime
+import math
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
@@ -16,44 +17,79 @@ class EvCreate(BaseModel):
     max_charging_power: float | None = None
 
 
-def simulate_charging(ev: UserEV):
-    now = datetime.datetime.now()
-
-    # Check if the schedule has ended
-    if not ev.schedule or ev.schedule.end < now:
-        constraint: Constraint = ev.get_previous_constraint()
-        if constraint:
-            ev.state = State.DISCONNECTED
-            ev.current_charge = constraint.target_percentage * ev.car_model.battery_capacity
+def simulate_charging(ev: UserEV, now: datetime.datetime = datetime.datetime.now()):
+    ev.current_charging_power = 0
+    if not ev.schedule:
+        ev.state = State.DISCONNECTED
+        return
+    
+    schedule_data = list(map(float, ev.schedule.schedule_data.split(", ")))
+    num_hours = len(schedule_data)
+    start = ev.schedule.start
+    end = ev.schedule.end
+    ev.current_charge = ev.schedule.start_charge
+    
+    # handle before, and after, and at beginning
+    if now < start:
+        return
+    elif now >= end:
+        ev.current_charge = ev.schedule.start_charge + sum(schedule_data)
+        return
+    elif now == start:
+        ev.current_charging_power = ev.max_charging_power
+        return
+    
+    
+    # handle single hour
+    if num_hours == 1:
+        if schedule_data[0] == 0: return
+        length = (end - start).total_seconds()
+        start_to_now = (now - start).total_seconds()
+        fraction = start_to_now / length
+        ev.current_charge = ev.schedule.start_charge + schedule_data[0] * fraction
+        ev.current_charging_power = ev.max_charging_power
         return
 
-    # Parse schedule data
-    try:
-        schedule_data = list(map(float, ev.schedule.schedule_data.split(", ")))
-    except (AttributeError, ValueError):
-        ev.state = State.IDLE
-        return
+    # handle multiple hours
+    current_hour = math.ceil((now - ev.schedule.start.replace(minute=0, second=0, microsecond=0)).total_seconds() / 3600)
 
-    # Calculate the current hour index
-    if not ev.schedule.start:
-        ev.state = State.IDLE
-        return
+    for i in range(current_hour):
+        # set charging power
+        if schedule_data[i] == 0:
+            ev.current_charging_power = 0
+        else:
+            ev.current_charging_power = ev.max_charging_power
 
-    now_hour = now.replace(minute=0, second=0, microsecond=0)
-    hour_idx = round((now_hour - ev.schedule.start).total_seconds() // 3600)
+        if i == 0: # first hour
+            if now.hour == start.hour:
+                next_hour = (now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+                length = (next_hour - start).total_seconds()
+                start_to_now = (now - start).total_seconds()
+                fraction = start_to_now / length
+                ev.current_charge += schedule_data[i] * fraction
+            else:
+                ev.current_charge += schedule_data[i]
+                
+        elif i == num_hours-1: # last hour
+            hour_zeroed = now.replace(minute=0, second=0, microsecond=0)
+            length = (end - hour_zeroed).total_seconds()
+            start_to_now = (now - hour_zeroed).total_seconds()
+            fraction = start_to_now / length
+            ev.current_charge += schedule_data[i] * fraction
+            
 
-    if 0 <= hour_idx < ev.schedule.num_hours:
-        ev.current_charging_power = schedule_data[hour_idx]
-        ev.state = State.CHARGING if ev.current_charging_power > 0 else State.IDLE
+        elif i == current_hour-1: # current hour
+            hour_zeroed = now.replace(minute=0, second=0, microsecond=0)
+            length = 3600
+            start_to_now = (now - hour_zeroed).total_seconds()
+            fraction = start_to_now / length
+            if fraction == 0: fraction = 1
+            ev.current_charge += schedule_data[i] * fraction
 
-        # Update charge for completed hours
-        ev.current_charge += sum(schedule_data[:hour_idx])
+        else: # any other hour
+            ev.current_charge += schedule_data[i]
+    
 
-        # Add charge for the current hour based on elapsed time
-        elapsed_fraction = (now.minute * 60 + now.second) / 3600
-        ev.current_charge += schedule_data[hour_idx] * elapsed_fraction
-    else:
-        ev.state = State.IDLE
 
 
 @router.post("/evs")

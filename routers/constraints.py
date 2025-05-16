@@ -42,7 +42,7 @@ async def edit_constraint(ev_id: int, form: ConstraintForm, db: Session = Depend
         # Try to find existing constraint
         constraint = db.query(Constraint).filter_by(id=form.id, ev_id=ev_id).first()
         if constraint:
-            if constraint.id == ev.schedule.constraint_id: # if editing constraint used for current schedule -> generate new schedule
+            if ev.schedule and constraint.id == ev.schedule.constraint_id: # if editing constraint used for current schedule -> generate new schedule
                 generate_new_schedule = True
             constraint.start_time = form.start_time
             constraint.end_time = form.end_time
@@ -50,7 +50,7 @@ async def edit_constraint(ev_id: int, form: ConstraintForm, db: Session = Depend
             db.commit()
             if ev.should_generate_new_schedule() or generate_new_schedule:
                 print("generated schedule for id", ev_id)
-                await make_schedule(ev_id, db)
+                make_schedule(ev_id, db)
             return {"detail": f"Constraint {constraint.id} updated"}
 
     new_constraint = Constraint(
@@ -66,7 +66,7 @@ async def edit_constraint(ev_id: int, form: ConstraintForm, db: Session = Depend
     
     if ev.should_generate_new_schedule() or generate_new_schedule:
         print("generated schedule for id", ev_id)
-        await make_schedule(ev_id, db)
+        make_schedule(ev_id, db)
 
     return {"detail": f"Constraint {new_constraint.id} created"}
 

@@ -95,5 +95,8 @@ class UserEV(Base):
 
         if self.schedule.end < datetime.datetime.now():
             return True
+        
+        if self.schedule.constraint_id != next_constraint.id:
+            return True
             
         return False
