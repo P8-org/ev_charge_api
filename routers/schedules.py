@@ -49,7 +49,7 @@ def make_schedule(ev_id: int, db: Session = Depends(get_db)):
 
 
     schedule_data = generate_schedule(num_hours, ev.current_charge, target_kwh, max_power, prices, constraint.start_time.minute, constraint.end_time.minute, False)
-    #schedule_data = adjust_rl_schedule(schedule_data, target_kwh - ev.current_charge, max_power)
+    schedule_data = adjust_rl_schedule(schedule_data, target_kwh - ev.current_charge, max_power, constraint.start_time.minute, constraint.end_time.minute)
 
     schedule_data = [0 if abs(x) < 1e-4 else x for x in schedule_data] #round very small numbers to 0
 

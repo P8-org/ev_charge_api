@@ -47,7 +47,7 @@ def optimize_charging_schedule_unused(prices, battery_capacity, initial_soc, max
     return charge.value if charge.value is not None else np.zeros(num_slots)
 
 
-def adjust_rl_schedule(rl_action, E_required, P_max):
+def adjust_rl_schedule(rl_action, E_required, P_max, first_hour_minutes: int = 0, last_hour_minutes: int = 0):
     """
     Adjusts the RL charging schedule using CVXPY to ensure feasibility.
 
@@ -59,15 +59,26 @@ def adjust_rl_schedule(rl_action, E_required, P_max):
     Returns:
         np.ndarray: Feasible schedule.
     """
+
+    first_hour_mult = (60 - first_hour_minutes) / 60
+    last_hour_mult = 1 if last_hour_minutes == 0 else last_hour_minutes / 60
+
     rl_action = np.array(rl_action)
     n = len(rl_action)
     x = cp.Variable(n)
+
+    # Build multipliers for each hour
+    multipliers = np.ones(n)
+    if n > 0:
+        multipliers[0] = first_hour_mult
+    if n > 1:
+        multipliers[-1] = last_hour_mult
 
     objective = cp.Minimize(cp.sum_squares(x - rl_action))
 
     constraints = [
         x >= 0,
-        x <= P_max,
+        x <= P_max * multipliers,
         cp.sum(x) >= E_required
     ]
 
