@@ -57,8 +57,10 @@ def simulate_charging(ev: UserEV, now: datetime.datetime = datetime.datetime.now
         # set charging power
         if schedule_data[i] == 0:
             ev.current_charging_power = 0
+            ev.state = State.IDLE
         else:
             ev.current_charging_power = ev.max_charging_power
+            ev.state = State.CHARGING
 
         if i == 0: # first hour
             if now.hour == start.hour:
