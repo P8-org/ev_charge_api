@@ -72,6 +72,8 @@ co2_data = get_co2_data(start_date, end_date)
 
 days = int(len(data) / 24)
 
+total_kwh = 0
+
 optimal_price = 0
 greedy_price = 0
 
@@ -98,6 +100,8 @@ for day in range(days-1):
 
         schedule_data = simulate(car=car, target_percentage=0.8, prices=prices)
 
+        total_kwh += sum(schedule_data)
+
         target_kwh = 0.8 * car.car_model.battery_capacity
 
         b = Benchmark(schedule_data, prices, target_kwh - car.current_charge, car.max_charging_power)
@@ -118,38 +122,39 @@ for day in range(days-1):
 
 
     else: # dont commute if weekend
-        do_nothing = random.random()
-        if do_nothing < 0.33: # take long drive 1/3 of days
-                car.current_charge = 40
-                leave_hour = 8
-                home_hour = 18
+        if random.random() < 0.2: # take long drive 1/5 of days
+            car.current_charge = 40
+            leave_hour = 8
+            home_hour = 18
 
-                slice_start = start_idx + home_hour
-                slice_end = start_idx + 24 + leave_hour
-                day_data = data[slice_start:slice_end]
-                prices = [record.TotalPriceDKK for record in day_data]
+            slice_start = start_idx + home_hour
+            slice_end = start_idx + 24 + leave_hour
+            day_data = data[slice_start:slice_end]
+            prices = [record.TotalPriceDKK for record in day_data]
 
-                schedule_data = simulate(car=car, target_percentage=0.8, prices=prices)
+            schedule_data = simulate(car=car, target_percentage=0.8, prices=prices)
 
-                target_kwh = 0.8 * car.car_model.battery_capacity
+            total_kwh += sum(schedule_data)
 
-                b = Benchmark(schedule_data, prices, target_kwh - car.current_charge, car.max_charging_power)
-                greedy_price += b.greedy_schedule_price()
-                optimal_price += b.optimized_schedule_price()
+            target_kwh = 0.8 * car.car_model.battery_capacity
 
-                for i in range(len(schedule_data)):
-                    charge = schedule_data[i]
-                    if charge < 0.1: 
-                        continue
-                    optimal_co2 += co2_data[slice_start + i] * charge
+            b = Benchmark(schedule_data, prices, target_kwh - car.current_charge, car.max_charging_power)
+            greedy_price += b.greedy_schedule_price()
+            optimal_price += b.optimized_schedule_price()
 
-                schedule_data = sorted(schedule_data, reverse=True)
+            for i in range(len(schedule_data)):
+                charge = schedule_data[i]
+                if charge < 0.1: 
+                    continue
+                optimal_co2 += co2_data[slice_start + i] * charge
 
-                for i in range(len(schedule_data)):
-                    charge = schedule_data[i]
-                    if charge < 0.1: 
-                        continue
-                    greedy_co2 += co2_data[slice_start + i] * charge
+            schedule_data = sorted(schedule_data, reverse=True)
+
+            for i in range(len(schedule_data)):
+                charge = schedule_data[i]
+                if charge < 0.1: 
+                    continue
+                greedy_co2 += co2_data[slice_start + i] * charge
 
 
 print("\n")
@@ -162,3 +167,5 @@ print("\n")
 print(f"greedy co2: {round(greedy_co2 / 1000)} kg")
 print(f"optimal co2: {round(optimal_co2 / 1000)} kg")
 print(f"savings: {round((greedy_co2 - optimal_co2) / greedy_co2 * 100)}%")
+
+print(f"total kwh used: {total_kwh} kwh")

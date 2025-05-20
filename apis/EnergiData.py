@@ -42,7 +42,7 @@ class EnergiDataInstance(BaseModel):
     # tallene kommer fra https://elberegner.dk/elpriser-time-for-time/
     # inkluderer: spot pris, elafgift, transport af strøm, moms
     # inklurerer IKKE: abonnement/udgifter fra elselskab fordi det er meget forskelligt
-    TAX: float = 0.72
+    TAX: float = 0.72 - 0.716 # -0.716 fordi man åbentbart kan få refunderet næsten hele elafgiften når man oplader elbiler
     VAT: float = 1.25
     def _transportFee(self) -> float:
         energinet = 0.061
