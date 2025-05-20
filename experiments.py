@@ -94,7 +94,7 @@ for day in range(days-1):
         slice_start = start_idx + home_hour
         slice_end = start_idx + 24 + leave_hour
         day_data = data[slice_start:slice_end]
-        prices = [record.SpotPriceDKK / 1000 for record in day_data]
+        prices = [record.TotalPriceDKK for record in day_data]
 
         schedule_data = simulate(car=car, target_percentage=0.8, prices=prices)
 
@@ -106,8 +106,6 @@ for day in range(days-1):
 
         for i in range(len(schedule_data)):
             charge = schedule_data[i]
-            if charge < 0.1: 
-                continue
             optimal_co2 += co2_data[slice_start + i] * charge
 
         schedule_data = sorted(schedule_data, reverse=True)
@@ -129,7 +127,7 @@ for day in range(days-1):
                 slice_start = start_idx + home_hour
                 slice_end = start_idx + 24 + leave_hour
                 day_data = data[slice_start:slice_end]
-                prices = [record.SpotPriceDKK / 1000 for record in day_data]
+                prices = [record.TotalPriceDKK for record in day_data]
 
                 schedule_data = simulate(car=car, target_percentage=0.8, prices=prices)
 

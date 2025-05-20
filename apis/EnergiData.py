@@ -1,5 +1,5 @@
 import json
-from pydantic import BaseModel, Json
+from pydantic import BaseModel, Json, computed_field
 import requests 
 import datetime
 
@@ -33,6 +33,27 @@ class EnergiDataInstance(BaseModel):
     PriceArea: str = ""
     SpotPriceDKK: float = 0
     SpotPriceEUR: float = 0
+
+    @computed_field
+    @property
+    def TotalPriceDKK(self) -> float:
+        return (self.SpotPriceDKK / 1000 + self.TAX + self._transportFee()) * self.VAT
+
+    # tallene kommer fra https://elberegner.dk/elpriser-time-for-time/
+    # inkluderer: spot pris, elafgift, transport af strøm, moms
+    # inklurerer IKKE: abonnement/udgifter fra elselskab fordi det er meget forskelligt
+    TAX: float = 0.72
+    VAT: float = 1.25
+    def _transportFee(self) -> float:
+        energinet = 0.061
+        hour = int(self.HourDK[11:13])
+        if hour < 6:
+            return 0.0867 + energinet
+        if hour < 17:
+            return 0.13 + energinet
+        if hour < 21:
+            return 0.338 + energinet
+        return 0.13 + energinet
 
 class EnergiData:
     # def __init__(self):
