@@ -34,6 +34,7 @@ def get_co2_data(start_date, end_date) -> list[float]:
     request_string = e.process_request(rd)
     co2_data = requests.get(base_url+request_string).json()
 
+    # co2 data is in 15 minutes resolution. We need 1 hour resolution, so we find the avg. for each hour
     hourly_co2_data = defaultdict(list)
 
     for record in co2_data["records"]:
