@@ -123,7 +123,7 @@ for day in range(days-1):
 
     else: # dont commute if weekend
         if random.random() < 0.2: # take long drive 1/5 of days
-            car.current_charge = 40
+            car.current_charge = 50
             leave_hour = 8
             home_hour = 18
 
