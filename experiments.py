@@ -82,14 +82,18 @@ greedy_co2 = 0
 
 random.seed(0)
 
+charged_prev_day = True
+days_charging = 0
 
 for day in range(days-1):
     print(f"\rDay {day}", end="", flush=True)
     start_idx = day * 24
     weekday: bool = is_weekday(datetime.datetime.fromisoformat(data[start_idx].HourDK))
 
-    if weekday: # normal commute
-        car.current_charge = 65
+    if weekday and not charged_prev_day: # normal commute. skip every second day
+        days_charging += 1
+        charged_prev_day = True
+        car.current_charge = 62
         leave_hour = 8
         home_hour = 17
 
@@ -121,40 +125,43 @@ for day in range(days-1):
             greedy_co2 += co2_data[slice_start + i] * charge
 
 
-    else: # dont commute if weekend
-        if random.random() < 0.2: # take long drive 1/5 of days
-            car.current_charge = 50
-            leave_hour = 8
-            home_hour = 18
+    elif random.random() < 0.2: # dont commute if weekend, take long drive (30 kWh) 1/5 of days
+        days_charging += 1
+        car.current_charge = 50 if charged_prev_day else 40 # because if not charged prev day it has -10 soc
+        charged_prev_day = True
+        leave_hour = 8
+        home_hour = 18
 
-            slice_start = start_idx + home_hour
-            slice_end = start_idx + 24 + leave_hour
-            day_data = data[slice_start:slice_end]
-            prices = [record.TotalPriceDKK for record in day_data]
+        slice_start = start_idx + home_hour
+        slice_end = start_idx + 24 + leave_hour
+        day_data = data[slice_start:slice_end]
+        prices = [record.TotalPriceDKK for record in day_data]
 
-            schedule_data = simulate(car=car, target_percentage=0.8, prices=prices)
+        schedule_data = simulate(car=car, target_percentage=0.8, prices=prices)
 
-            total_kwh += sum(schedule_data)
+        total_kwh += sum(schedule_data)
 
-            target_kwh = 0.8 * car.car_model.battery_capacity
+        target_kwh = 0.8 * car.car_model.battery_capacity
 
-            b = Benchmark(schedule_data, prices, target_kwh - car.current_charge, car.max_charging_power)
-            greedy_price += b.greedy_schedule_price()
-            optimal_price += b.optimized_schedule_price()
+        b = Benchmark(schedule_data, prices, target_kwh - car.current_charge, car.max_charging_power)
+        greedy_price += b.greedy_schedule_price()
+        optimal_price += b.optimized_schedule_price()
 
-            for i in range(len(schedule_data)):
-                charge = schedule_data[i]
-                if charge < 0.1: 
-                    continue
-                optimal_co2 += co2_data[slice_start + i] * charge
+        for i in range(len(schedule_data)):
+            charge = schedule_data[i]
+            if charge < 0.1: 
+                continue
+            optimal_co2 += co2_data[slice_start + i] * charge
 
-            schedule_data = sorted(schedule_data, reverse=True)
+        schedule_data = sorted(schedule_data, reverse=True)
 
-            for i in range(len(schedule_data)):
-                charge = schedule_data[i]
-                if charge < 0.1: 
-                    continue
-                greedy_co2 += co2_data[slice_start + i] * charge
+        for i in range(len(schedule_data)):
+            charge = schedule_data[i]
+            if charge < 0.1: 
+                continue
+            greedy_co2 += co2_data[slice_start + i] * charge
+    else:
+        charged_prev_day = False
 
 
 print("\n")
@@ -169,3 +176,5 @@ print(f"optimal co2: {round(optimal_co2 / 1000)} kg")
 print(f"savings: {round((greedy_co2 - optimal_co2) / greedy_co2 * 100)}%")
 
 print(f"total kwh used: {total_kwh} kwh")
+
+print(f"days charged: {days_charging}")
