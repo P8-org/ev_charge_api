@@ -328,7 +328,7 @@ def train_dqn(cars: list[dict], rd:RequestDetail, num_chargers:int = None, num_e
     data = EnergiData().call_api(rd)
     print(f"Days of data: {len(data)/24}")
 
-    prices = [i.SpotPriceDKK / 1000 for i in data]
+    prices = [i.TotalPriceDKK for i in data]
     times = [np.datetime64(i.HourDK) for i in data]
 
     prices_np = np.asarray(prices, dtype=np.float32)
@@ -384,7 +384,7 @@ def run_dqn(car: dict, rd:RequestDetail):
     data = EnergiData().call_api(rd)
     print(f"Days of data: {len(data)/24}")
 
-    prices = [i.SpotPriceDKK / 1000 for i in data]
+    prices = [i.TotalPriceDKK for i in data]
     times = [np.datetime64(i.HourDK) for i in data]
 
     prices_np = np.asarray(prices, dtype=np.float32)
