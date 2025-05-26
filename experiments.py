@@ -1,6 +1,7 @@
 import datetime
 import json
 import random
+import numpy as np
 
 import requests
 from collections import defaultdict
@@ -10,15 +11,26 @@ from modules.benchmark_prices import Benchmark
 from modules.linear_optimization_controller import adjust_rl_schedule
 from modules.rl_short_term_scheduling import generate_schedule
 
+from RL.DQN.DQN_single import run_dqn, train_dqn
+
 def is_weekday(datetime: datetime.datetime) -> bool:
     return datetime.weekday() < 5
 
 
-def simulate(car: UserEV, target_percentage: float, prices: list[float]) -> list[float]:
+def simulate(car: UserEV, target_percentage: float, prices: list[float], times: list[datetime]) -> list[float]:
     target_kwh = target_percentage * car.car_model.battery_capacity
+    c = {
+        'id': 1, 
+        'charge_percentage': min(car.current_charge / car.car_model.battery_capacity * 100, 100),
+        'min_percentage': target_percentage * 100,
+        'charge': car.current_charge,
+        'max_charge_kw': car.car_model.battery_capacity,
+        'charge_speed': car.max_charging_power,
+        'constraints': {}
+    }
     schedule_data = generate_schedule(num_hours=len(prices), initial_soc=car.current_charge, battery_capacity=target_kwh, max_chargin_rate=car.max_charging_power, prices=prices)
-    schedule_data = adjust_rl_schedule(schedule_data, target_kwh - car.current_charge, car.max_charging_power)
-    
+    # schedule_data : list[float] = run_dqn(c, prices, times)[0]['charge_kw']
+    schedule_data = adjust_rl_schedule(schedule_data, target_kwh - car.current_charge, car.max_charging_power)  
     return schedule_data
 
 def get_co2_data(start_date, end_date) -> list[float]:
@@ -89,6 +101,8 @@ for day in range(days-1):
     print(f"\rDay {day}", end="", flush=True)
     start_idx = day * 24
     weekday: bool = is_weekday(datetime.datetime.fromisoformat(data[start_idx].HourDK))
+    start = (datetime.datetime.fromisoformat(data[start_idx].HourDK)).strftime("%Y-%m-%dT%H:%M")
+    end = (datetime.datetime.fromisoformat(data[start_idx].HourDK) + datetime.timedelta(days=2)).strftime("%Y-%m-%dT%H:%M")
 
     if weekday and not charged_prev_day: # normal commute. skip every second day
         days_charging += 1
@@ -101,8 +115,10 @@ for day in range(days-1):
         slice_end = start_idx + 24 + leave_hour
         day_data = data[slice_start:slice_end]
         prices = [record.TotalPriceDKK for record in day_data]
+        times = [np.datetime64(record.HourDK) for record in day_data]
+        # print(day_data)
 
-        schedule_data = simulate(car=car, target_percentage=0.8, prices=prices)
+        schedule_data = simulate(car=car, target_percentage=0.8, prices=prices, times=times)
 
         total_kwh += sum(schedule_data)
 
@@ -136,9 +152,10 @@ for day in range(days-1):
         slice_end = start_idx + 24 + leave_hour
         day_data = data[slice_start:slice_end]
         prices = [record.TotalPriceDKK for record in day_data]
+        times = [np.datetime64(record.HourDK) for record in day_data]
+        # print(day_data)
 
-        schedule_data = simulate(car=car, target_percentage=0.8, prices=prices)
-
+        schedule_data = simulate(car=car, target_percentage=0.8, prices=prices, times=times)
         total_kwh += sum(schedule_data)
 
         target_kwh = 0.8 * car.car_model.battery_capacity

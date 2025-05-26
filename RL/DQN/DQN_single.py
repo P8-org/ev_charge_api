@@ -29,7 +29,7 @@ class ElectricChargeEnv(gym.Env):
 
         self.prices = np.array(prices, dtype=np.float32)
         self.times = np.array(times)
-        self.car = car  # single car
+        self.base_car = car  # single car
         self.total_time = len(prices)
         self.max_price = np.max(self.prices)
 
@@ -46,10 +46,10 @@ class ElectricChargeEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-
+        self.car = self.base_car
         self.t = 0
-        self.car["charge"] = 0
-        self.car["charge_percentage"] = 0
+        # self.car["charge"] = 0
+        # self.car["charge_percentage"] = 0
         self.car["started_at"] = None
         self.car["charge_kw"] = []  # To track charge history (0 or charge_speed)
         self.done = False
@@ -77,8 +77,13 @@ class ElectricChargeEnv(gym.Env):
         """
         Decide whether to charge the car now based on future prices, constraints, and urgency.
         """
-        remaining_charge = car['max_charge_kw'] - car['charge']
+        target_charge = (self.car["min_percentage"] / 100) * self.car["max_charge_kw"]
+        remaining_charge = target_charge - self.car["charge"]
+        # remaining_charge = car['max_charge_kw'] - car['charge']
         hours_needed = int(np.ceil(remaining_charge / car['charge_speed']))
+
+        # if car['charge_percentage'] >= car['min_percentage']:
+        #     return False
 
         constraints = car['constraints']
         start = constraints.get('start', 0)
@@ -114,6 +119,7 @@ class ElectricChargeEnv(gym.Env):
         reward = 0
         hours_left = self.total_time - self.t
         end_constraint = self.car['constraints'].get('end', self.total_time)
+        start_constraint = self.car['constraints'].get('start', 0)
         time_until_end = end_constraint - self.t
 
         # Encourage early and steady charging
@@ -124,20 +130,25 @@ class ElectricChargeEnv(gym.Env):
         elif action == 1:
             reward += 1   # Small reward for charging
 
-        if self.car["charge_percentage"] < 100 and self._should_charge_now(self.car, hours_left):
+        if self.car["charge_percentage"] < self.car['min_percentage'] and self._should_charge_now(self.car, hours_left):
             if self.car["started_at"] is None:
                 self.car["started_at"] = self.t
 
-            self.car["charge"] += self.car["charge_speed"]
+
+            target_charge = (self.car["min_percentage"] / 100) * self.car["max_charge_kw"]
+            remaining_charge_needed = target_charge - self.car["charge"]
+            charge_this_step = min(self.car["charge_speed"], remaining_charge_needed)
+
+            self.car["charge"] += charge_this_step
             self.car["charge_percentage"] = min(
                 (self.car["charge"] / self.car["max_charge_kw"]) * 100, 100
             )
-            self.car["charge_kw"].append(self.car["charge_speed"])  # Log charging for this hour
+            self.car["charge_kw"].append(float(charge_this_step))
         else:
             # Not charging this hour, fill in the gap if charging has started
-            if self.car["started_at"] is not None and time_until_end > 0:
-                self.car["charge_kw"].append(0)
-
+            # if self.car["started_at"] is not None and time_until_end > 0:
+            if self.t >= start_constraint and self.t < end_constraint:
+                self.car["charge_kw"].append(0.0)
 
         # Calculate cost and reward
         cost = self.prices[self.t] * self.car["charge_speed"] if action == 1 else 0
@@ -153,7 +164,8 @@ class ElectricChargeEnv(gym.Env):
         elif self.car["charge_percentage"] >= 100:
             self.done = True
 
-        if self.car["started_at"] is not None and (self.car["charge_percentage"] >= 100 or self.done):
+        # if self.car["started_at"] is not None and (self.car["charge_percentage"] >= 100 or self.done):
+        if self.car["started_at"] is not None and self.done:
             # Finalize the last charging session if still active
             if self.car["started_at"] is not None:
                 self.schedule.append({
@@ -263,7 +275,7 @@ class DQNAgent:
             self.target_network.load_state_dict(checkpoint['target_network_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             self.epsilon = checkpoint.get('epsilon', 1.0)
-            print(f"[cyan]Model loaded from {path}[/cyan]")
+            # print(f"[cyan]Model loaded from {path}[/cyan]")
             return True
         else:
             print(f"[red]No model found at {path}[/red]")
@@ -380,12 +392,13 @@ def train_dqn(cars: list[dict], rd:RequestDetail, num_chargers:int = None, num_e
     # ------------------------------
     # Testing the Trained Agent
     # ------------------------------
-def run_dqn(car: dict, rd:RequestDetail):
-    data = EnergiData().call_api(rd)
-    print(f"Days of data: {len(data)/24}")
+# def run_dqn(car: dict, rd:RequestDetail):
+def run_dqn(car: dict, prices, times):
+    # data = EnergiData().call_api(rd)
+    # print(f"Days of data: {len(data)/24}")
 
-    prices = [i.TotalPriceDKK for i in data]
-    times = [np.datetime64(i.HourDK) for i in data]
+    # prices = [i.TotalPriceDKK for i in data]
+    # times = [np.datetime64(i.HourDK) for i in data]
 
     prices_np = np.asarray(prices, dtype=np.float32)
     times_np = np.asarray(times, dtype=np.datetime64)
@@ -401,8 +414,8 @@ def run_dqn(car: dict, rd:RequestDetail):
 
     if agent.load("single_dqn_model.pth"):
 
-        print("\n[bold underline]Testing Trained Agent[/bold underline]")
-        print(f"\n[Testing] starting at {times_48[0]}")
+        # print("\n[bold underline]Testing Trained Agent[/bold underline]")
+        # print(f"\n[Testing] starting at {times_48[0]}")
         state, _ = env.reset()
         done = False
         while not done:
@@ -412,10 +425,10 @@ def run_dqn(car: dict, rd:RequestDetail):
             action = int(torch.argmax(q_values, dim=1).item())
             state, _, done, _, _ = env.step(action)
 
-        print(env.schedule)    
-        print(prices_48)
-        prices_48.sort()
-        print(prices_48[:7])
+        # print(env.schedule)    
+        # print(prices_48)
+        # prices_48.sort()
+        # print(prices_48[:7])
         return env.schedule
     else:
         return "No model trained"
