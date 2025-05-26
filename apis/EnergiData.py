@@ -1,5 +1,5 @@
 import json
-from pydantic import BaseModel, Json
+from pydantic import BaseModel, Json, computed_field
 import requests 
 import datetime
 
@@ -34,13 +34,34 @@ class EnergiDataInstance(BaseModel):
     SpotPriceDKK: float = 0
     SpotPriceEUR: float = 0
 
+    @computed_field
+    @property
+    def TotalPriceDKK(self) -> float:
+        return (self.SpotPriceDKK / 1000 + self.TAX + self._transportFee()) * self.VAT
+
+    # tallene kommer fra https://elberegner.dk/elpriser-time-for-time/
+    # inkluderer: spot pris, elafgift, transport af strøm, moms
+    # inklurerer IKKE: abonnement/udgifter fra elselskab fordi det er meget forskelligt
+    TAX: float = 0.72 - 0.716 # -0.716 fordi man åbentbart kan få refunderet næsten hele elafgiften når man oplader elbiler
+    VAT: float = 1.25
+    def _transportFee(self) -> float:
+        energinet = 0.061
+        hour = int(self.HourDK[11:13])
+        if hour < 6:
+            return 0.0867 + energinet
+        if hour < 17:
+            return 0.13 + energinet
+        if hour < 21:
+            return 0.338 + energinet
+        return 0.13 + energinet
+
 class EnergiData:
     # def __init__(self):
     #     self.data = []
 
     # data: list[EnergiDataInstance]
 
-    def __process_request(self, rd: RequestDetail):
+    def process_request(self, rd: RequestDetail):
 
         request_string = f'{rd.dataset}?start={rd.startDate}'
 
@@ -74,7 +95,7 @@ class EnergiData:
 
     def call_api(self, rd: RequestDetail) -> list[EnergiDataInstance]:
         base_url = "https://api.energidataservice.dk/dataset/"
-        request_string = self.__process_request(rd)
+        request_string = self.process_request(rd)
 
         r = requests.get(base_url+request_string)
 
@@ -86,7 +107,7 @@ class EnergiData:
         rd.startDate = "StartOfDay"
         rd.endDate = ""
 
-        request_string = self.__process_request(rd)
+        request_string = self.process_request(rd)
 
         r = requests.get(base_url+request_string)
 
@@ -98,7 +119,7 @@ class EnergiData:
         rd.startDate = "StartOfMonth"
         rd.endDate = ""
 
-        request_string = self.__process_request(rd)
+        request_string = self.process_request(rd)
 
         r = requests.get(base_url+request_string)
         print(base_url+request_string)
@@ -110,7 +131,7 @@ class EnergiData:
         rd.startDate = "StartOfYear"
         rd.endDate = ""
 
-        request_string = self.__process_request(rd)
+        request_string = self.process_request(rd)
 
         r = requests.get(base_url+request_string)
 

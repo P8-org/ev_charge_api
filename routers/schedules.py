@@ -42,7 +42,7 @@ async def make_schedule(ev_id: int, db: Session = Depends(get_db)):
         response.pop(0)
 
     hour_dk = [record.HourDK for record in response]
-    prices = [record.SpotPriceDKK / 1000 for record in response]
+    prices = [record.TotalPriceDKK for record in response]
 
     max_power = min(ev.max_charging_power, ev.car_model.max_charging_power)
 
