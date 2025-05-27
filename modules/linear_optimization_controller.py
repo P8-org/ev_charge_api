@@ -22,7 +22,8 @@ def optimize_charging_schedule_unused(prices, battery_capacity, initial_soc, max
     
     num_slots = min(len(prices), deadline) 
     # Convert initial SoC to kWh
-    initial_energy = (initial_soc / 100) * battery_capacity
+    # initial_energy = (initial_soc / 100) * battery_capacity
+    initial_energy = initial_soc
     required_energy = battery_capacity - initial_energy
     
     # Define decision variable (energy charged per time slot)
@@ -41,7 +42,7 @@ def optimize_charging_schedule_unused(prices, battery_capacity, initial_soc, max
     # Solve optimization problem
     problem = cp.Problem(objective, constraints)
     problem.solve()
-    print(charge.value)
+    # print(charge.value)
     
     # Return optimized charging schedule
     return charge.value if charge.value is not None else np.zeros(num_slots)

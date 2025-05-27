@@ -15,9 +15,9 @@ def generate_schedule(num_hours: int, initial_soc: float, battery_capacity: floa
         list[float]: A list representing the charging schedule, where each element corresponds to the charging rate (in kW) for the respective hour.
     """
 
-    alpha = 0.2 # learning rate
-    epsilon = 0.1 # exploration rate
-    episodes = 100_000 # episodes
+    alpha = 0.5 # learning rate
+    epsilon = 0.05 # exploration rate
+    episodes = 5_000 # episodes
 
     if (num_hours >= len(prices)): num_hours = len(prices)
 
