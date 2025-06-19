@@ -78,7 +78,7 @@ def schedule(num_hours: int, battery_level: float, battery_capacity: float, max_
     response = e.call_api(rd)
     
     hour_dk = [record.HourDK for record in response]
-    prices = [record.SpotPriceDKK / 1000 for record in response]
+    prices = [record.TotalPriceDKK for record in response]
     schedule = generate_schedule(num_hours, battery_level, battery_capacity, max_chargin_rate, prices)
     adjusted_schedule = adjust_rl_schedule(schedule,battery_capacity - battery_level, max_chargin_rate)
     print(np.array(schedule))
